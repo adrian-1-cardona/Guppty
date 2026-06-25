@@ -23,7 +23,7 @@ Guppty is working!
 5
 ```
 
-## Install `guppty` (optional)
+## Install `guppty` (RECOMMDED AND EASIER ) at least I think it is for now 
 
 After this, you can type `guppty` from anywhere:
 
