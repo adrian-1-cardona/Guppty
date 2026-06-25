@@ -1,0 +1,5 @@
+// This program shows how comments work in Guppy
+out("Comments are ignored by the interpreter"); // inline comment too
+
+x = 42; // numbers work fine with comments
+out(x); // prints 42

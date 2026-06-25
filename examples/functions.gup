@@ -1,0 +1,9 @@
+math()
+    x = 5;
+    y = 6;
+    out(x + y);
+
+main()
+    math();
+
+main();

@@ -1,98 +1,222 @@
 // === interpreter.rs ===
-// The interpreter is the part that actually DOES the work!
-//
-// Think of it like an actor reading a script:
-//   - The script (AST) says "call out with Hello World!"
-//   - The interpreter reads that and actually prints "Hello World!" to the screen
-//
-// It walks through the AST tree, node by node, and performs
-// the action each node describes. This is where the magic happens!
+// The interpreter walks through the AST and actually runs the program.
 
-use crate::ast::{Expr, Stmt, Program};
+use std::collections::HashMap;
+
+use crate::ast::{BinaryOp, Expr, Program, Stmt};
 use crate::value::Value;
 
-/// This is the main function — give it a program (list of statements)
-/// and it will execute every single one, in order, from top to bottom.
-/// Like reading a book page by page.
+#[derive(Debug, Clone)]
+struct Function {
+    body: Vec<Stmt>,
+}
+
+struct Environment {
+    variables: HashMap<String, Value>,
+    functions: HashMap<String, Function>,
+}
+
+impl Environment {
+    fn new() -> Self {
+        Environment {
+            variables: HashMap::new(),
+            functions: HashMap::new(),
+        }
+    }
+}
+
 pub fn interpret(program: Program) {
-    // Go through each statement one at a time and run it
-    for statement in program {
-        execute_statement(&statement);
+    let mut env = Environment::new();
+
+    // First pass: register all function definitions
+    for statement in &program {
+        if let Stmt::FunctionDef { name, body } = statement {
+            env.functions.insert(
+                name.clone(),
+                Function {
+                    body: body.clone(),
+                },
+            );
+        }
+    }
+
+    // Second pass: execute non-function-def statements
+    for statement in &program {
+        if !matches!(statement, Stmt::FunctionDef { .. }) {
+            execute_statement(statement, &mut env);
+        }
     }
 }
 
-/// Execute ONE statement.
-/// Right now, the only kind of statement we have is an ExpressionStatement,
-/// which just means "evaluate this expression and move on."
-fn execute_statement(stmt: &Stmt) {
+fn execute_statement(stmt: &Stmt, env: &mut Environment) {
     match stmt {
-        // An expression statement — just run the expression!
         Stmt::ExpressionStatement(expr) => {
-            // We run it but don't need to keep the result
-            // (like calling out("hi") — we just want the side effect of printing)
-            evaluate_expression(expr);
+            evaluate_expression(expr, env);
+        }
+        Stmt::VariableDeclaration { name, value } => {
+            let evaluated = evaluate_expression(value, env);
+            env.variables.insert(name.clone(), evaluated);
+        }
+        Stmt::ForLoop {
+            variable,
+            iterable,
+            body,
+        } => {
+            let values = evaluate_iterable(iterable, env);
+
+            for value in values {
+                env.variables.insert(variable.clone(), value);
+                for body_stmt in body {
+                    execute_statement(body_stmt, env);
+                }
+            }
+        }
+        Stmt::FunctionDef { .. } => {
+            // Already registered in the first pass
         }
     }
 }
 
-/// Evaluate ONE expression and figure out what value it produces.
-/// This is where we actually compute things!
-fn evaluate_expression(expr: &Expr) -> Value {
+fn evaluate_iterable(expr: &Expr, env: &mut Environment) -> Vec<Value> {
     match expr {
-        // --- STRING LITERAL ---
-        // If it's a string like "Hello World!", just return it as a value.
-        // Easy peasy!
-        Expr::StringLiteral(text) => {
-            Value::GuppyString(text.clone())
-        }
+        Expr::Range { start, end } => {
+            let start_val = evaluate_expression(start, env);
+            let end_val = evaluate_expression(end, env);
 
-        // --- FUNCTION CALL ---
-        // If it's a function call like out("Hello World!"), we need to:
-        //   1. Figure out which function is being called
-        //   2. Evaluate all the arguments (get their values)
-        //   3. Do what that function is supposed to do
+            let start_num = start_val
+                .as_number()
+                .unwrap_or_else(|msg| panic!("{}", msg));
+            let end_num = end_val
+                .as_number()
+                .unwrap_or_else(|msg| panic!("{}", msg));
+
+            let mut values = Vec::new();
+            let mut current = start_num as i64;
+            let end = end_num as i64;
+
+            if current <= end {
+                while current <= end {
+                    values.push(Value::GuppyNumber(current));
+                    current += 1;
+                }
+            } else {
+                while current >= end {
+                    values.push(Value::GuppyNumber(current));
+                    current -= 1;
+                }
+            }
+
+            values
+        }
+        other => {
+            let value = evaluate_expression(other, env);
+            vec![value]
+        }
+    }
+}
+
+fn evaluate_expression(expr: &Expr, env: &mut Environment) -> Value {
+    match expr {
+        Expr::StringLiteral(text) => Value::GuppyString(text.clone()),
+        Expr::CharLiteral(ch) => Value::GuppyChar(*ch),
+        Expr::NumberLiteral(n) => Value::GuppyNumber(*n),
+        Expr::FloatLiteral(f) => Value::GuppyFloat(*f),
+        Expr::BoolLiteral(b) => Value::GuppyBool(*b),
+        Expr::ArrayLiteral(items) => {
+            let values = items
+                .iter()
+                .map(|item| evaluate_expression(item, env))
+                .collect();
+            Value::GuppyArray(values)
+        }
+        Expr::Variable(name) => env
+            .variables
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| panic!("Variable '{}' is not defined yet!", name)),
+        Expr::BinaryOp { left, op, right } => {
+            let left_val = evaluate_expression(left, env);
+            let right_val = evaluate_expression(right, env);
+            evaluate_binary_op(&left_val, *op, &right_val)
+        }
         Expr::FunctionCall { name, args } => {
-            // First, evaluate all the arguments so we have their actual values
             let evaluated_args: Vec<Value> = args
                 .iter()
-                .map(|arg| evaluate_expression(arg))
+                .map(|arg| evaluate_expression(arg, env))
                 .collect();
 
-            // Now check which function is being called and do the right thing
             match name.as_str() {
-                // "out" is our built-in print function!
-                // It takes whatever you give it and prints it to the screen.
                 "out" => {
-                    // Make sure they gave us at least one thing to print
                     if evaluated_args.is_empty() {
-                        panic!("out() needs something to print! Try: out(\"Hello!\")");
+                        println!();
+                    } else {
+                        let output: Vec<String> = evaluated_args
+                            .iter()
+                            .map(|v| v.to_display_string())
+                            .collect();
+                        println!("{}", output.join(" "));
                     }
-
-                    // Print each argument
-                    for arg_value in &evaluated_args {
-                        match arg_value {
-                            // If it's a string, print the text
-                            Value::GuppyString(text) => {
-                                println!("{}", text);
-                            }
-                            // If it's Nothing... well, print nothing
-                            Value::Nothing => {
-                                println!();
-                            }
-                        }
-                    }
-
-                    // out() doesn't return anything meaningful
                     Value::Nothing
                 }
-
-                // If someone calls a function we don't know about, tell them!
                 unknown => {
-                    panic!(
-                        "I don't know a function called '{}'! Right now I only know 'out'.",
-                        unknown
-                    );
+                    if let Some(function) = env.functions.get(unknown).cloned() {
+                        let mut call_env = Environment::new();
+                        call_env.functions = env.functions.clone();
+                        call_env.variables = env.variables.clone();
+
+                        for body_stmt in &function.body {
+                            execute_statement(body_stmt, &mut call_env);
+                        }
+
+                        env.variables = call_env.variables;
+                        Value::Nothing
+                    } else {
+                        panic!(
+                            "I don't know a function called '{}'! Define it first or use a built-in like out().",
+                            unknown
+                        );
+                    }
                 }
+            }
+        }
+        Expr::Range { .. } => {
+            panic!("range() can only be used inside a for loop like: for i in range(1 through 6)");
+        }
+    }
+}
+
+fn evaluate_binary_op(left: &Value, op: BinaryOp, right: &Value) -> Value {
+    match (left, right) {
+        (Value::GuppyString(a), Value::GuppyString(b)) if op == BinaryOp::Add => {
+            Value::GuppyString(format!("{}{}", a, b))
+        }
+        _ => {
+            let left_num = left
+                .as_number()
+                .unwrap_or_else(|msg| panic!("{}", msg));
+            let right_num = right
+                .as_number()
+                .unwrap_or_else(|msg| panic!("{}", msg));
+
+            let result = match op {
+                BinaryOp::Add => left_num + right_num,
+                BinaryOp::Sub => left_num - right_num,
+                BinaryOp::Mul => left_num * right_num,
+                BinaryOp::Div => {
+                    if right_num == 0.0 {
+                        panic!("Cannot divide by zero!");
+                    }
+                    left_num / right_num
+                }
+            };
+
+            let is_float = matches!(left, Value::GuppyFloat(_))
+                || matches!(right, Value::GuppyFloat(_));
+
+            if is_float {
+                Value::GuppyFloat(result)
+            } else {
+                Value::GuppyNumber(result as i64)
             }
         }
     }
