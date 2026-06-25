@@ -2,6 +2,11 @@ name: Backfill Solved Issues
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/scripts/create-solved-issues.sh
+      - .github/workflows/backfill-solved-issues.yml
 
 permissions:
   contents: read
