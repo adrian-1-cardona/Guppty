@@ -607,3 +607,191 @@ pub fn parse(tokens: Vec<Token>) -> Program {
     let mut parser = Parser::new(tokens);
     parser.parse_program()
 }
+
+// =============================================================================
+// UNIT TESTS — we check that the parser builds the right tree from tokens!
+// If these break, the interpreter might do the wrong thing. Super important!
+// =============================================================================
+#[cfg(test)]
+mod tests {
+    // parser stuff from this file
+    use super::*;
+    // we need the lexer to turn text into tokens first (parser eats tokens)
+    use crate::lexer;
+    // we need AST shapes to check "did we build the right tree?"
+    use crate::ast::{BinaryOp, Expr, Stmt};
+
+    // -------------------------------------------------------------------------
+    // helper: shorthand — text in, program tree out
+    // why? every test does lex then parse, so don't repeat that every time
+    // -------------------------------------------------------------------------
+    fn parse_source(source: &str) -> Program {
+        parse(lexer::lex(source))
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: x = 5 should become a VariableDeclaration statement
+    // why? storing stuff in boxes (variables) is how programs remember things
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_variable_declaration() {
+        let program = parse_source("x = 5");
+
+        // we should have exactly one statement
+        assert_eq!(program.len(), 1);
+
+        // and it should be "put 5 in a box named x"
+        match &program[0] {
+            Stmt::VariableDeclaration { name, value } => {
+                assert_eq!(name, "x");
+                assert!(matches!(value, Expr::NumberLiteral(5)));
+            }
+            other => panic!("expected variable declaration, got {:?}", other),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: out("hello") is an ExpressionStatement with a FunctionCall inside
+    // why? printing is the #1 thing beginners do — it must parse right!
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_out_function_call() {
+        let program = parse_source(r#"out("hello")"#);
+
+        assert_eq!(program.len(), 1);
+
+        match &program[0] {
+            Stmt::ExpressionStatement(Expr::FunctionCall { name, args }) => {
+                assert_eq!(name, "out");
+                assert_eq!(args.len(), 1);
+                assert!(matches!(&args[0], Expr::StringLiteral(s) if s == "hello"));
+            }
+            other => panic!("expected out() call, got {:?}", other),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: 2 + 3 * 4 should multiply BEFORE adding (math rules!)
+    // why? wrong order = wrong answer = angry users
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_operator_precedence() {
+        let program = parse_source("out(2 + 3 * 4)");
+
+        match &program[0] {
+            Stmt::ExpressionStatement(Expr::FunctionCall { args, .. }) => {
+                match &args[0] {
+                    Expr::BinaryOp { left, op, right } => {
+                        // the top level should be PLUS (add happens last)
+                        assert_eq!(*op, BinaryOp::Add);
+                        assert!(matches!(left.as_ref(), Expr::NumberLiteral(2)));
+                        // the right side should be 3 * 4 (multiply first)
+                        match right.as_ref() {
+                            Expr::BinaryOp {
+                                op: BinaryOp::Mul,
+                                ..
+                            } => {}
+                            other => panic!("expected multiply on the right, got {:?}", other),
+                        }
+                    }
+                    other => panic!("expected binary op, got {:?}", other),
+                }
+            }
+            other => panic!("expected expression statement, got {:?}", other),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: for i in range(1 through 3) should become a ForLoop statement
+    // why? loops let you do something many times without copy-pasting code
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_for_loop() {
+        let source = "for i in range(1 through 3)\n    out(i)";
+        let program = parse_source(source);
+
+        match &program[0] {
+            Stmt::ForLoop {
+                variable,
+                iterable,
+                body,
+            } => {
+                assert_eq!(variable, "i");
+                assert!(matches!(
+                    iterable,
+                    Expr::Range { start, end }
+                    if matches!(start.as_ref(), Expr::NumberLiteral(1))
+                        && matches!(end.as_ref(), Expr::NumberLiteral(3))
+                ));
+                assert_eq!(body.len(), 1);
+            }
+            other => panic!("expected for loop, got {:?}", other),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: greet() with an indented body is a FunctionDef
+    // why? functions are reusable recipe cards — define once, use many times
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_function_definition() {
+        let source = "greet()\n    out(\"hi\")";
+        let program = parse_source(source);
+
+        match &program[0] {
+            Stmt::FunctionDef { name, params, body } => {
+                assert_eq!(name, "greet");
+                assert!(params.is_empty());
+                assert_eq!(body.len(), 1);
+            }
+            other => panic!("expected function def, got {:?}", other),
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: true, false, 'a', "hi", [] all parse as the right literal types
+    // why? different kinds of data need different boxes in the interpreter
+    // -------------------------------------------------------------------------
+    #[test]
+    fn parses_literals() {
+        let program = parse_source("a = true\nb = false\nc = 'x'\nd = \"hi\"\ne = []");
+
+        assert_eq!(program.len(), 5);
+
+        assert!(matches!(
+            &program[0],
+            Stmt::VariableDeclaration {
+                value: Expr::BoolLiteral(true),
+                ..
+            }
+        ));
+        assert!(matches!(
+            &program[1],
+            Stmt::VariableDeclaration {
+                value: Expr::BoolLiteral(false),
+                ..
+            }
+        ));
+        assert!(matches!(
+            &program[2],
+            Stmt::VariableDeclaration {
+                value: Expr::CharLiteral('x'),
+                ..
+            }
+        ));
+        assert!(matches!(
+            &program[3],
+            Stmt::VariableDeclaration {
+                value: Expr::StringLiteral(s),
+                ..
+            } if s == "hi"
+        ));
+        assert!(matches!(
+            &program[4],
+            Stmt::VariableDeclaration {
+                value: Expr::ArrayLiteral(items),
+                ..
+            } if items.is_empty()
+        ));
+    }
+}

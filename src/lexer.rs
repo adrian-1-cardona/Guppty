@@ -305,3 +305,150 @@ pub fn lex(source: &str) -> Vec<Token> {
 pub fn is_print_function(name: &str) -> bool {
     name == SYNTAX.print_fn
 }
+
+// =============================================================================
+// UNIT TESTS — we check that the lexer chops code the right way!
+// If these break, words and numbers might get mixed up. That would be bad.
+// =============================================================================
+#[cfg(test)]
+mod tests {
+    // we need the stuff from this same file
+    use super::*;
+    // we need TokenKind to check what kind of slice each token is
+    use crate::token::TokenKind;
+
+    // -------------------------------------------------------------------------
+    // helper: pull out only the "real" token kinds (not newlines/indents/end)
+    // why? because we mostly care about words and symbols, not the glue between
+    // -------------------------------------------------------------------------
+    fn without_structure(tokens: &[Token]) -> Vec<TokenKind> {
+        tokens
+            .iter()
+            .map(|token| token.kind.clone())
+            .filter(|kind| {
+                !matches!(
+                    kind,
+                    TokenKind::Newline | TokenKind::Indent | TokenKind::Dedent | TokenKind::EOF
+                )
+            })
+            .collect()
+    }
+
+    // -------------------------------------------------------------------------
+    // helper: check if the token list has a certain kind somewhere in it
+    // why? indent/dedent tests need this because tokens also have line numbers
+    // -------------------------------------------------------------------------
+    fn has_kind(tokens: &[Token], kind: TokenKind) -> bool {
+        tokens.iter().any(|token| token.kind == kind)
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: out("hi") should become: out, (, "hi", )
+    // this matters because EVERY program uses out() to print stuff!
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_simple_out_call() {
+        // step 1: give the lexer a tiny program
+        let tokens = lex(r#"out("hi")"#);
+
+        // step 2: throw away newline/indent junk we don't care about here
+        let important = without_structure(&tokens);
+
+        // step 3: make sure we got the right LEGO pieces in the right order
+        assert_eq!(
+            important,
+            vec![
+                TokenKind::Identifier("out".into()),
+                TokenKind::LeftParen,
+                TokenKind::StringLiteral("hi".into()),
+                TokenKind::RightParen,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: // comments should disappear (the lexer eats them)
+    // why? so you can write notes in your code and the computer ignores them
+    // -------------------------------------------------------------------------
+    #[test]
+    fn strips_inline_comments() {
+        let tokens = lex(r#"out("ok") // this is a comment"#);
+        let important = without_structure(&tokens);
+
+        // the comment words should NOT show up as tokens!
+        assert_eq!(
+            important,
+            vec![
+                TokenKind::Identifier("out".into()),
+                TokenKind::LeftParen,
+                TokenKind::StringLiteral("ok".into()),
+                TokenKind::RightParen,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: numbers — whole numbers AND numbers with a dot (like 3.14)
+    // why? math needs numbers or nothing adds up!
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_number_literals() {
+        let tokens = lex("x = 42\nf = 3.14");
+        let important = without_structure(&tokens);
+
+        assert!(important.contains(&TokenKind::NumberLiteral(42)));
+        assert!(important.contains(&TokenKind::FloatLiteral(3.14)));
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: special words like "for" and "true" are their own token kinds
+    // why? the parser needs to know they are magic words, not regular names
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_keywords() {
+        let tokens = lex("for in range through true false");
+        let important = without_structure(&tokens);
+
+        assert_eq!(
+            important,
+            vec![
+                TokenKind::For,
+                TokenKind::In,
+                TokenKind::Range,
+                TokenKind::Through,
+                TokenKind::True,
+                TokenKind::False,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: when a line is pushed in (more spaces), we get Indent
+    // when it pops back out, we get Dedent — like folding paper tabs
+    // why? guppy uses spaces to know "this code goes INSIDE that block"
+    // -------------------------------------------------------------------------
+    #[test]
+    fn emits_indent_and_dedent() {
+        let source = "outer()\n    inner()";
+        let tokens = lex(source);
+
+        assert!(has_kind(&tokens, TokenKind::Indent));
+        assert!(has_kind(&tokens, TokenKind::Dedent));
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: math symbols + - * / = all become their own tokens
+    // why? 2+2 only works if the lexer sees Plus, not a random letter
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_operators() {
+        let tokens = lex("a + b - c * d / e = f");
+        let important = without_structure(&tokens);
+
+        assert!(important.contains(&TokenKind::Plus));
+        assert!(important.contains(&TokenKind::Minus));
+        assert!(important.contains(&TokenKind::Star));
+        assert!(important.contains(&TokenKind::Slash));
+        assert!(important.contains(&TokenKind::Equal));
+    }
+}
