@@ -237,3 +237,142 @@ pub fn lex(source: &str) -> Vec<Token> {
     tokens.push(Token::EOF);
     tokens
 }
+
+// =============================================================================
+// UNIT TESTS — we check that the lexer chops code the right way!
+// If these break, words and numbers might get mixed up. That would be bad.
+// =============================================================================
+#[cfg(test)]
+mod tests {
+    // we need the stuff from this same file
+    use super::*;
+    // we need to know what Token looks like so we can check our answers
+    use crate::token::Token;
+
+    // -------------------------------------------------------------------------
+    // helper: pull out only the "real" tokens (not spaces/newlines/end marks)
+    // why? because we mostly care about words and symbols, not the glue between
+    // -------------------------------------------------------------------------
+    fn without_structure(tokens: &[Token]) -> Vec<Token> {
+        tokens
+            .iter()
+            .filter(|t| {
+                !matches!(
+                    t,
+                    Token::Newline | Token::Indent | Token::Dedent | Token::EOF
+                )
+            })
+            .cloned()
+            .collect()
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: out("hi") should become: out, (, "hi", )
+    // this matters because EVERY program uses out() to print stuff!
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_simple_out_call() {
+        // step 1: give the lexer a tiny program
+        let tokens = lex(r#"out("hi")"#);
+
+        // step 2: throw away newline/indent junk we don't care about here
+        let important = without_structure(&tokens);
+
+        // step 3: make sure we got the right LEGO pieces in the right order
+        assert_eq!(
+            important,
+            vec![
+                Token::Identifier("out".into()),
+                Token::LeftParen,
+                Token::StringLiteral("hi".into()),
+                Token::RightParen,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: // comments should disappear (the lexer eats them)
+    // why? so you can write notes in your code and the computer ignores them
+    // -------------------------------------------------------------------------
+    #[test]
+    fn strips_inline_comments() {
+        let tokens = lex(r#"out("ok") // this is a comment"#);
+        let important = without_structure(&tokens);
+
+        // the comment words should NOT show up as tokens!
+        assert_eq!(
+            important,
+            vec![
+                Token::Identifier("out".into()),
+                Token::LeftParen,
+                Token::StringLiteral("ok".into()),
+                Token::RightParen,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: numbers — whole numbers AND numbers with a dot (like 3.14)
+    // why? math needs numbers or nothing adds up!
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_number_literals() {
+        let tokens = lex("x = 42\nf = 3.14");
+        let important = without_structure(&tokens);
+
+        assert!(important.contains(&Token::NumberLiteral(42)));
+        assert!(important.contains(&Token::FloatLiteral(3.14)));
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: special words like "for" and "true" are their own token kinds
+    // why? the parser needs to know they are magic words, not regular names
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_keywords() {
+        let tokens = lex("for in range through true false");
+        let important = without_structure(&tokens);
+
+        assert_eq!(
+            important,
+            vec![
+                Token::For,
+                Token::In,
+                Token::Range,
+                Token::Through,
+                Token::True,
+                Token::False,
+            ]
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: when a line is pushed in (more spaces), we get Indent
+    // when it pops back out, we get Dedent — like folding paper tabs
+    // why? guppy uses spaces to know "this code goes INSIDE that block"
+    // -------------------------------------------------------------------------
+    #[test]
+    fn emits_indent_and_dedent() {
+        let source = "outer()\n    inner()";
+        let tokens = lex(source);
+
+        assert!(tokens.contains(&Token::Indent));
+        assert!(tokens.contains(&Token::Dedent));
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST: math symbols + - * / = all become their own tokens
+    // why? 2+2 only works if the lexer sees Plus, not a random letter
+    // -------------------------------------------------------------------------
+    #[test]
+    fn lex_operators() {
+        let tokens = lex("a + b - c * d / e = f");
+        let important = without_structure(&tokens);
+
+        assert!(important.contains(&Token::Plus));
+        assert!(important.contains(&Token::Minus));
+        assert!(important.contains(&Token::Star));
+        assert!(important.contains(&Token::Slash));
+        assert!(important.contains(&Token::Equal));
+    }
+}
