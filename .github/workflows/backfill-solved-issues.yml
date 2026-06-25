@@ -18,11 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure solved label exists
+      - name: Ensure labels exist
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create "solved" --repo "${{ github.repository }}" --color "0E8A16" --description "Work completed and merged" 2>/dev/null || true
+          for label in "solved:0E8A16:Work completed and merged" "enhancement:a2eeef:New feature or request" "documentation:0075ca:Improvements or additions to documentation" "chore:fef2c0:Maintenance and housekeeping"; do
+            name="${label%%:*}"
+            rest="${label#*:}"
+            color="${rest%%:*}"
+            desc="${rest#*:}"
+            gh label create "$name" --repo "${{ github.repository }}" --color "$color" --description "$desc" 2>/dev/null || true
+          done
 
       - name: Create, assign, and close solved issues
         env:
