@@ -1,19 +1,14 @@
 // === interpreter.rs ===
-// the interpreter is the actor — it walks the AST tree and DOES the code!
-// it keeps boxes of variables (environments) and knows when to open new boxes (scopes).
-// closures remember which box they were born in — that is super important magic!
+// The interpreter walks the AST and runs the code.
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::{BinaryOp, Expr, Program, Stmt, UnaryOp};
+use crate::ast::{BinaryOp, Expr, ExprKind, Program, Stmt, StmtKind, UnaryOp};
 use crate::environment::{Environment, GuppyFunction};
+use crate::error::{GupError, Span};
 use crate::lexer::is_print_function;
 use crate::value::Value;
-
-/// when return happens we throw this little flag to stop running the function
-#[derive(Debug, Clone)]
-struct ReturnSignal(Value);
 
 /// when a statement finishes we say either "keep going" or "return this value!"
 enum ExecResult {
@@ -21,12 +16,12 @@ enum ExecResult {
     Return(Value),
 }
 
-pub fn interpret(program: Program) {
+pub fn interpret(program: Program) -> Result<(), GupError> {
     let env = Environment::new();
 
     // first pass: register all top-level functions so they can call each other
     for statement in &program {
-        if let Stmt::FunctionDef { name, params, body } = statement {
+        if let StmtKind::FunctionDef { name, params, body } = &statement.kind {
             let function = GuppyFunction {
                 params: params.clone(),
                 body: body.clone(),
@@ -39,101 +34,101 @@ pub fn interpret(program: Program) {
 
     // second pass: run everything that is not a function definition
     for statement in &program {
-        if !matches!(statement, Stmt::FunctionDef { .. }) {
-            execute_statement(statement, env.clone());
+        if !matches!(&statement.kind, StmtKind::FunctionDef { .. }) {
+            execute_statement(statement, env.clone())?;
         }
     }
+
+    Ok(())
 }
 
-fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> ExecResult {
-    match stmt {
-        // run an expression for side effects (like out("hi"))
-        Stmt::ExpressionStatement(expr) => {
-            evaluate_expression(expr, env);
-            ExecResult::Continue
+fn execute_statement(
+    stmt: &Stmt,
+    env: Rc<RefCell<Environment>>,
+) -> Result<ExecResult, GupError> {
+    match &stmt.kind {
+        StmtKind::ExpressionStatement(expr) => {
+            evaluate_expression(expr, env)?;
+            Ok(ExecResult::Continue)
         }
 
-        // x = 5  — update an existing name anywhere in the chain, or make a new one here
-        Stmt::VariableDeclaration { name, value } => {
-            let evaluated = evaluate_expression(value, env.clone());
+        StmtKind::VariableDeclaration { name, value } => {
+            let evaluated = evaluate_expression(value, env.clone())?;
             let mut env_ref = env.borrow_mut();
 
             if env_ref.exists(name) {
                 env_ref
                     .assign(name, evaluated)
-                    .unwrap_or_else(|msg| panic!("{}", msg));
+                    .map_err(|msg| GupError::runtime(stmt.span, msg))?;
             } else {
                 env_ref.define(name.clone(), evaluated);
             }
 
-            ExecResult::Continue
+            Ok(ExecResult::Continue)
         }
 
-        // if the condition is truthy run the then branch, else run else branch
-        Stmt::IfStatement {
+        StmtKind::IfStatement {
             condition,
             then_branch,
             else_branch,
         } => {
-            let condition_value = evaluate_expression(condition, env.clone());
+            let condition_value = evaluate_expression(condition, env.clone())?;
 
             if condition_value.is_truthy() {
                 execute_block(then_branch, env)
             } else if let Some(else_body) = else_branch {
                 execute_block(else_body, env)
             } else {
-                ExecResult::Continue
+                Ok(ExecResult::Continue)
             }
         }
 
-        // keep running the body while the condition stays truthy
-        Stmt::WhileLoop { condition, body } => {
+        StmtKind::WhileLoop { condition, body } => {
             loop {
-                let condition_value = evaluate_expression(condition, env.clone());
+                let condition_value = evaluate_expression(condition, env.clone())?;
                 if !condition_value.is_truthy() {
                     break;
                 }
 
-                match execute_block(body, env.clone()) {
-                    ExecResult::Return(value) => return ExecResult::Return(value),
+                match execute_block(body, env.clone())? {
+                    ExecResult::Return(value) => return Ok(ExecResult::Return(value)),
                     ExecResult::Continue => {}
                 }
             }
 
-            ExecResult::Continue
+            Ok(ExecResult::Continue)
         }
 
-        // for i in range(1 through 3) — each loop gets the loop variable in the same scope
-        Stmt::ForLoop {
+        StmtKind::ForLoop {
             variable,
             iterable,
             body,
         } => {
-            let values = evaluate_iterable(iterable, env.clone());
+            let values = evaluate_iterable(iterable, env.clone())?;
 
             for value in values {
                 env.borrow_mut().define(variable.clone(), value);
 
-                match execute_block(body, env.clone()) {
-                    ExecResult::Return(return_value) => return ExecResult::Return(return_value),
+                match execute_block(body, env.clone())? {
+                    ExecResult::Return(return_value) => {
+                        return Ok(ExecResult::Return(return_value));
+                    }
                     ExecResult::Continue => {}
                 }
             }
 
-            ExecResult::Continue
+            Ok(ExecResult::Continue)
         }
 
-        // return sends a value back and stops the function immediately
-        Stmt::ReturnStatement { value } => {
+        StmtKind::ReturnStatement { value } => {
             let return_value = match value {
-                Some(expr) => evaluate_expression(expr, env),
+                Some(expr) => evaluate_expression(expr, env)?,
                 None => Value::Nothing,
             };
-            ExecResult::Return(return_value)
+            Ok(ExecResult::Return(return_value))
         }
 
-        // define a function and remember the current box (closure!)
-        Stmt::FunctionDef { name, params, body } => {
+        StmtKind::FunctionDef { name, params, body } => {
             let function = GuppyFunction {
                 params: params.clone(),
                 body: body.clone(),
@@ -141,37 +136,39 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> ExecResult {
             };
             env.borrow_mut()
                 .define(name.clone(), Value::GuppyFunction(function));
-            ExecResult::Continue
+            Ok(ExecResult::Continue)
         }
     }
 }
 
-fn execute_block(statements: &[Stmt], env: Rc<RefCell<Environment>>) -> ExecResult {
-    // a block gets its own inner box so local variables do not leak out!
+fn execute_block(
+    statements: &[Stmt],
+    env: Rc<RefCell<Environment>>,
+) -> Result<ExecResult, GupError> {
     let block_env = Environment::with_parent(env);
 
     for stmt in statements {
-        match execute_statement(stmt, block_env.clone()) {
-            ExecResult::Return(value) => return ExecResult::Return(value),
+        match execute_statement(stmt, block_env.clone())? {
+            ExecResult::Return(value) => return Ok(ExecResult::Return(value)),
             ExecResult::Continue => {}
         }
     }
 
-    ExecResult::Continue
+    Ok(ExecResult::Continue)
 }
 
-fn evaluate_iterable(expr: &Expr, env: Rc<RefCell<Environment>>) -> Vec<Value> {
-    match expr {
-        Expr::Range { start, end } => {
-            let start_val = evaluate_expression(start, env.clone());
-            let end_val = evaluate_expression(end, env);
+fn evaluate_iterable(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Vec<Value>, GupError> {
+    match &expr.kind {
+        ExprKind::Range { start, end } => {
+            let start_val = evaluate_expression(start, env.clone())?;
+            let end_val = evaluate_expression(end, env)?;
 
             let start_num = start_val
                 .as_number()
-                .unwrap_or_else(|msg| panic!("{}", msg));
+                .map_err(|msg| GupError::runtime(start.span, msg))?;
             let end_num = end_val
                 .as_number()
-                .unwrap_or_else(|msg| panic!("{}", msg));
+                .map_err(|msg| GupError::runtime(end.span, msg))?;
 
             let mut values = Vec::new();
             let mut current = start_num as i64;
@@ -189,66 +186,63 @@ fn evaluate_iterable(expr: &Expr, env: Rc<RefCell<Environment>>) -> Vec<Value> {
                 }
             }
 
-            values
+            Ok(values)
         }
-        other => {
-            let value = evaluate_expression(other, env);
-            vec![value]
-        }
+        _ => Ok(vec![evaluate_expression(expr, env)?]),
     }
 }
 
-fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Value {
-    match expr {
-        Expr::StringLiteral(text) => Value::GuppyString(text.clone()),
-        Expr::CharLiteral(ch) => Value::GuppyChar(*ch),
-        Expr::NumberLiteral(n) => Value::GuppyNumber(*n),
-        Expr::FloatLiteral(f) => Value::GuppyFloat(*f),
-        Expr::BoolLiteral(b) => Value::GuppyBool(*b),
-        Expr::ArrayLiteral(items) => {
+fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Value, GupError> {
+    match &expr.kind {
+        ExprKind::StringLiteral(text) => Ok(Value::GuppyString(text.clone())),
+        ExprKind::CharLiteral(ch) => Ok(Value::GuppyChar(*ch)),
+        ExprKind::NumberLiteral(n) => Ok(Value::GuppyNumber(*n)),
+        ExprKind::FloatLiteral(f) => Ok(Value::GuppyFloat(*f)),
+        ExprKind::BoolLiteral(b) => Ok(Value::GuppyBool(*b)),
+        ExprKind::ArrayLiteral(items) => {
             let values = items
                 .iter()
                 .map(|item| evaluate_expression(item, env.clone()))
-                .collect();
-            Value::GuppyArray(values)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Value::GuppyArray(values))
         }
-        Expr::Variable(name) => env
+        ExprKind::Variable(name) => env
             .borrow()
             .get(name)
-            .unwrap_or_else(|msg| panic!("{}", msg)),
-        Expr::UnaryOp { op, operand } => {
-            let value = evaluate_expression(operand, env);
-            evaluate_unary_op(*op, &value)
+            .map_err(|msg| GupError::runtime(expr.span, msg)),
+        ExprKind::UnaryOp { op, operand } => {
+            let value = evaluate_expression(operand, env)?;
+            evaluate_unary_op(*op, &value, expr.span)
         }
-        Expr::BinaryOp { left, op, right } => {
-            // and / or short-circuit — skip the second side when we already know the answer!
+        ExprKind::BinaryOp { left, op, right } => {
+            // and / or short-circuit — skip the second side when the answer is known
             if *op == BinaryOp::And {
-                let left_val = evaluate_expression(left, env.clone());
+                let left_val = evaluate_expression(left, env.clone())?;
                 if !left_val.is_truthy() {
-                    return Value::GuppyBool(false);
+                    return Ok(Value::GuppyBool(false));
                 }
-                let right_val = evaluate_expression(right, env);
-                return Value::GuppyBool(right_val.is_truthy());
+                let right_val = evaluate_expression(right, env)?;
+                return Ok(Value::GuppyBool(right_val.is_truthy()));
             }
 
             if *op == BinaryOp::Or {
-                let left_val = evaluate_expression(left, env.clone());
+                let left_val = evaluate_expression(left, env.clone())?;
                 if left_val.is_truthy() {
-                    return Value::GuppyBool(true);
+                    return Ok(Value::GuppyBool(true));
                 }
-                let right_val = evaluate_expression(right, env);
-                return Value::GuppyBool(right_val.is_truthy());
+                let right_val = evaluate_expression(right, env)?;
+                return Ok(Value::GuppyBool(right_val.is_truthy()));
             }
 
-            let left_val = evaluate_expression(left, env.clone());
-            let right_val = evaluate_expression(right, env);
-            evaluate_binary_op(&left_val, *op, &right_val)
+            let left_val = evaluate_expression(left, env.clone())?;
+            let right_val = evaluate_expression(right, env)?;
+            evaluate_binary_op(&left_val, *op, &right_val, expr.span)
         }
-        Expr::FunctionCall { name, args } => {
+        ExprKind::FunctionCall { name, args } => {
             let evaluated_args: Vec<Value> = args
                 .iter()
                 .map(|arg| evaluate_expression(arg, env.clone()))
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
 
             if is_print_function(name) {
                 if evaluated_args.is_empty() {
@@ -260,80 +254,94 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Value {
                         .collect();
                     println!("{}", output.join(" "));
                 }
-                return Value::Nothing;
+                return Ok(Value::Nothing);
             }
 
             let function = env
                 .borrow()
                 .get(name)
-                .unwrap_or_else(|msg| panic!("{}", msg));
+                .map_err(|msg| GupError::runtime(expr.span, msg))?;
 
             match function {
-                Value::GuppyFunction(function) => call_function(function, evaluated_args),
-                other => panic!(
-                    "'{}' is not a function! It is {}",
-                    name,
-                    other.to_display_string()
-                ),
+                Value::GuppyFunction(function) => call_function(function, evaluated_args, expr.span),
+                other => Err(GupError::runtime(
+                    expr.span,
+                    format!(
+                        "'{}' is not a function. It is {}.",
+                        name,
+                        other.to_display_string()
+                    ),
+                )),
             }
         }
-        Expr::Range { .. } => {
-            panic!("range() can only be used inside a for loop like: for i in range(1 through 6)");
-        }
+        ExprKind::Range { .. } => Err(GupError::runtime(
+            expr.span,
+            "range() can only be used inside a for loop, like: for i in range(1 through 6).",
+        )),
     }
 }
 
-fn call_function(function: GuppyFunction, args: Vec<Value>) -> Value {
+fn call_function(
+    function: GuppyFunction,
+    args: Vec<Value>,
+    call_span: Span,
+) -> Result<Value, GupError> {
     if function.params.len() != args.len() {
-        panic!(
-            "Wrong number of arguments! Expected {} but got {}",
-            function.params.len(),
-            args.len()
-        );
+        return Err(GupError::runtime(
+            call_span,
+            format!(
+                "Wrong number of arguments. Expected {} but got {}.",
+                function.params.len(),
+                args.len()
+            ),
+        ));
     }
 
-    // open a new box inside the box where the function was born (closure magic!)
     let call_env = Environment::with_parent(function.closure);
 
     for (param, arg) in function.params.iter().zip(args) {
         call_env.borrow_mut().define(param.clone(), arg);
     }
 
-    match execute_block(&function.body, call_env) {
-        ExecResult::Return(value) => value,
-        ExecResult::Continue => Value::Nothing,
+    match execute_block(&function.body, call_env)? {
+        ExecResult::Return(value) => Ok(value),
+        ExecResult::Continue => Ok(Value::Nothing),
     }
 }
 
-fn evaluate_unary_op(op: UnaryOp, value: &Value) -> Value {
+fn evaluate_unary_op(op: UnaryOp, value: &Value, span: Span) -> Result<Value, GupError> {
     match op {
-        UnaryOp::Not => Value::GuppyBool(!value.is_truthy()),
+        UnaryOp::Not => Ok(Value::GuppyBool(!value.is_truthy())),
         UnaryOp::Negate => {
             let number = value
                 .as_number()
-                .unwrap_or_else(|msg| panic!("{}", msg));
+                .map_err(|msg| GupError::runtime(span, msg))?;
             if matches!(value, Value::GuppyFloat(_)) {
-                Value::GuppyFloat(-number)
+                Ok(Value::GuppyFloat(-number))
             } else {
-                Value::GuppyNumber(-number as i64)
+                Ok(Value::GuppyNumber(-number as i64))
             }
         }
     }
 }
 
-fn evaluate_binary_op(left: &Value, op: BinaryOp, right: &Value) -> Value {
-    // string plus anything makes a bigger string!
+fn evaluate_binary_op(
+    left: &Value,
+    op: BinaryOp,
+    right: &Value,
+    span: Span,
+) -> Result<Value, GupError> {
+    // string plus anything makes a bigger string
     if op == BinaryOp::Add {
         if matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)) {
-            return Value::GuppyString(format!(
+            return Ok(Value::GuppyString(format!(
                 "{}{}",
                 left.to_display_string(),
                 right.to_display_string()
-            ));
+            )));
         }
     }
 
-    // comparisons work on numbers AND strings AND booleans
     if matches!(
         op,
         BinaryOp::Equal
@@ -343,16 +351,15 @@ fn evaluate_binary_op(left: &Value, op: BinaryOp, right: &Value) -> Value {
             | BinaryOp::LessEqual
             | BinaryOp::GreaterEqual
     ) {
-        return Value::GuppyBool(compare_values(left, op, right));
+        return Ok(Value::GuppyBool(compare_values(left, op, right)));
     }
 
-    // regular math needs numbers
     let left_num = left
         .as_number()
-        .unwrap_or_else(|msg| panic!("{}", msg));
+        .map_err(|msg| GupError::runtime(span, msg))?;
     let right_num = right
         .as_number()
-        .unwrap_or_else(|msg| panic!("{}", msg));
+        .map_err(|msg| GupError::runtime(span, msg))?;
 
     let result = match op {
         BinaryOp::Add => left_num + right_num,
@@ -360,28 +367,31 @@ fn evaluate_binary_op(left: &Value, op: BinaryOp, right: &Value) -> Value {
         BinaryOp::Mul => left_num * right_num,
         BinaryOp::Div => {
             if right_num == 0.0 {
-                panic!("Cannot divide by zero!");
+                return Err(GupError::runtime(span, "Cannot divide by zero."));
             }
             left_num / right_num
         }
-        _ => unreachable!("comparison operators handled above"),
+        _ => {
+            return Err(GupError::runtime(
+                span,
+                "This operator cannot be used as a math operator here.",
+            ));
+        }
     };
 
-    let is_float =
-        matches!(left, Value::GuppyFloat(_)) || matches!(right, Value::GuppyFloat(_));
+    let is_float = matches!(left, Value::GuppyFloat(_)) || matches!(right, Value::GuppyFloat(_));
 
     if is_float {
-        Value::GuppyFloat(result)
+        Ok(Value::GuppyFloat(result))
     } else {
-        Value::GuppyNumber(result as i64)
+        Ok(Value::GuppyNumber(result as i64))
     }
 }
 
 fn compare_values(left: &Value, op: BinaryOp, right: &Value) -> bool {
-    // if both sides are numbers, compare as numbers
     if left.as_number().is_ok() && right.as_number().is_ok() {
-        let left_num = left.as_number().unwrap();
-        let right_num = right.as_number().unwrap();
+        let left_num = left.as_number().unwrap_or(0.0);
+        let right_num = right.as_number().unwrap_or(0.0);
         return match op {
             BinaryOp::Equal => left_num == right_num,
             BinaryOp::NotEqual => left_num != right_num,
@@ -393,7 +403,6 @@ fn compare_values(left: &Value, op: BinaryOp, right: &Value) -> bool {
         };
     }
 
-    // otherwise compare how they look when printed (strings, bools, etc.)
     let left_text = left.to_display_string();
     let right_text = right.to_display_string();
 
@@ -405,11 +414,5 @@ fn compare_values(left: &Value, op: BinaryOp, right: &Value) -> bool {
         BinaryOp::LessEqual => left_text <= right_text,
         BinaryOp::GreaterEqual => left_text >= right_text,
         _ => false,
-    }
-}
-#[allow(dead_code)]
-impl ReturnSignal {
-    fn value(self) -> Value {
-        self.0
     }
 }
