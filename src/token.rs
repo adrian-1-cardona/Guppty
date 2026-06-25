@@ -67,21 +67,4 @@ impl Token {
     pub fn new(kind: TokenKind, line: usize) -> Self {
         Token { kind, line }
     }
-
-    pub fn eof() -> Self {
-        Token::new(TokenKind::EOF, 0)
-    }
-}
-
-impl TokenKind {
-    pub fn is_statement_start(&self) -> bool {
-        matches!(
-            self,
-            TokenKind::For
-                | TokenKind::If
-                | TokenKind::While
-                | TokenKind::Return
-                | TokenKind::Identifier(_)
-        )
-    }
 }

@@ -69,9 +69,6 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> ExecResult {
             ExecResult::Continue
         }
 
-        // a group of statements inside one scope box
-        Stmt::Block { statements } => execute_block(statements, env),
-
         // if the condition is truthy run the then branch, else run else branch
         Stmt::IfStatement {
             condition,

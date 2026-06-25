@@ -59,9 +59,6 @@ pub enum Stmt {
         name: String,
         value: Expr,
     },
-    Block {
-        statements: Vec<Stmt>,
-    },
     IfStatement {
         condition: Expr,
         then_branch: Vec<Stmt>,
