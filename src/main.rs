@@ -12,6 +12,7 @@
 // That's it! The main.rs just connects everything together.
 
 // --- These lines tell Rust "hey, I have code in these other files, use them!" ---
+mod error;        // nice error messages with line/column/span
 mod token;        // our LEGO piece types (what kinds of tokens exist)
 mod syntax;       // the menu of special words — change syntax in ONE place!
 mod lexer;        // the cookie cutter (breaks code into tokens)
@@ -53,11 +54,20 @@ fn main() {
     // Step 5: THE PIPELINE — this is where the magic happens!
 
     // 5a: LEXER — chop the source code into tokens (LEGO pieces)
-    let tokens = lexer::lex(&source);
+    let tokens = lexer::lex(&source).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 
     // 5b: PARSER — arrange the tokens into a tree (figure out the structure)
-    let program = parser::parse(tokens);
+    let program = parser::parse(tokens).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 
     // 5c: INTERPRETER — walk the tree and actually DO what the code says!
-    interpreter::interpret(program);
+    interpreter::interpret(program).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 }
