@@ -25,6 +25,7 @@ Guppty is working!
 
 ## Install `guppty` (RECOMMDED AND EASIER ) at least I think it is for now 
 
+
 After this, you can type `guppty` from anywhere:
 
 ```bash
