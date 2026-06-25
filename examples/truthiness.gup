@@ -1,0 +1,13 @@
+// only false and nothing are "lies" — everything else is truthy!
+// this matters for if and while because they check truthiness!
+
+ifHelper(value)
+    if value
+        return "truthy"
+    return "falsy"
+
+out(ifHelper(false))
+out(ifHelper(true))
+out(ifHelper(0))
+out(ifHelper(1))
+out(ifHelper(""))

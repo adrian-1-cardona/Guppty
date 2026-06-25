@@ -1,0 +1,9 @@
+// max of two numbers using if — a classic tiny program!
+
+max(a, b)
+    if a > b
+        return a
+    return b
+
+out(max(3, 9))
+out(max(100, 50))

@@ -1,0 +1,12 @@
+// + glues strings together!
+// you can mix strings and numbers because we turn them into text!
+
+greeting = "Hello "
+name = "Guppy"
+out(greeting + name)
+
+out("You have " + 3 + " fish")
+
+first = "abc"
+second = "def"
+out(first + second)

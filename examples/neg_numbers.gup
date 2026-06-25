@@ -1,0 +1,9 @@
+// negative numbers use a minus sign in front!
+// unary minus flips a number to its opposite side!
+
+out(-5)
+out(-3.5)
+
+x = 10
+out(0 - x)
+out(x + -2)

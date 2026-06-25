@@ -1,0 +1,11 @@
+// functions can take inputs called parameters!
+// add(3, 4) sends 3 and 4 into the function — like passing notes in class!
+
+add(a, b)
+    out(a + b)
+
+multiply(x, y)
+    out(x * y)
+
+add(3, 4)
+multiply(6, 7)

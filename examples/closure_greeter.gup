@@ -1,0 +1,13 @@
+// a greeter closure remembers a name and uses it later!
+// it is like giving someone a personalized hello button!
+
+makeGreeter(name)
+    greet()
+        return "Hello, " + name + "!"
+    return greet
+
+sayHi = makeGreeter("Adrian")
+out(sayHi())
+
+sayBye = makeGreeter("World")
+out(sayBye())

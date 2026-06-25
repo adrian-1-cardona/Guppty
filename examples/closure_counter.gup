@@ -1,0 +1,17 @@
+// closures can remember and change a counter variable!
+// each makeCounter() gets its OWN count — they do not share!
+
+makeCounter(start)
+    count = start
+    increment()
+        count = count + 1
+        return count
+    return increment
+
+counterA = makeCounter(0)
+counterB = makeCounter(100)
+
+out(counterA())
+out(counterA())
+out(counterB())
+out(counterA())

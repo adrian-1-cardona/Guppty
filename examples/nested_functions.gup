@@ -1,0 +1,16 @@
+// functions can call other functions — like a team working together!
+
+helper()
+    return 10
+
+doubleIt(x)
+    return x + helper()
+
+out(doubleIt(5))
+
+outer()
+    inner()
+        out("deep call works!")
+    inner()
+
+outer()

@@ -1,25 +1,103 @@
 # Guppty Syntax
 
-# Hello World
-out("Hello World"); 
+Keywords are configurable in `src/syntax.rs`. Examples below use the defaults.
 
-# For Loop 
+## Hello World
+
+```
+out("Hello World")
+```
+
+## Variables (numbers, strings, booleans, chars, floats)
+
+```
+x = 5
+bool = true
+y = 'h'
+z = "hello"
+f = 1.25
+```
+
+## Math
+
+```
+out(2 + 3)
+out(10 - 3)
+out(6 * 5)
+out(15 / 5)
+```
+
+## Comparisons and logic
+
+```
+out(5 == 5)
+out(3 < 10)
+out(true and false)
+out(not false)
+```
+
+## If / else
+
+```
+score = 85
+if score >= 80
+    out("You passed!")
+else
+    out("Keep studying!")
+```
+
+## While loop
+
+```
+count = 3
+while count > 0
+    out(count)
+    count = count - 1
+```
+
+## For loop
+
+```
 for i in range(1 through 6)
-    out(i);
+    out(i)
+```
 
-# Function math()
-    x = 5;
-    y = 6;
-    out(x + y); // should print 11
-# Function main()
-    math(); // this is the recursive call to the math function 
+## Functions with parameters and return
 
-# // the double slash "//" is how you comment on code 
+```
+add(a, b)
+    return a + b
 
-# Variabels 
-    x = 5; // number 
-    []; //empty array
-    bool  = true; //boolean
-    y = 'h'; //char
-    z = "hello"; //string
-    f = 1.25; //float
+out(add(2, 3))
+```
+
+## Closures
+
+```
+makeAdder(x)
+    addIt(y)
+        return x + y
+    return addIt
+
+adder = makeAdder(5)
+out(adder(3))
+```
+
+## Comments
+
+```
+// double slash starts a comment
+out(42) // inline comments work too
+```
+
+## Function definition (indented block)
+
+```
+math()
+    x = 5
+    y = 6
+    out(x + y)
+
+main()
+    math()
+```

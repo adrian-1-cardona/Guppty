@@ -1,0 +1,14 @@
+// a closure remembers variables from where it was BORN!
+// makeAdder(5) returns a function that always adds 5 — magic!
+
+makeAdder(x)
+    addIt(y)
+        return x + y
+    return addIt
+
+adder = makeAdder(5)
+out(adder(3))
+out(adder(10))
+
+double = makeAdder(100)
+out(double(1))

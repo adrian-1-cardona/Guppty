@@ -1,0 +1,11 @@
+// == != < > <= >= let us compare things!
+// super important for if and while to make smart choices!
+
+out(5 == 5)
+out(5 != 3)
+out(3 < 5)
+out(10 > 7)
+out(4 <= 4)
+out(9 >= 8)
+out("a" == "a")
+out("a" != "b")

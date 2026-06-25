@@ -1,9 +1,12 @@
 // === lexer.rs ===
-// The lexer cuts source code into neat little token pieces.
+// the lexer is like a cookie cutter — it chops code into token shapes!
+// it also watches spaces at the start of lines to know when blocks begin and end.
+// blocks matter SO much because that is how scopes work!
 
-use crate::token::Token;
+use crate::syntax::{keyword_token, SYNTAX};
+use crate::token::{Token, TokenKind};
 
-/// Strip inline comments starting with //
+/// cut off // comments so they do not become code
 fn strip_comment(line: &str) -> &str {
     let mut in_string = false;
     let chars: Vec<char> = line.chars().collect();
@@ -19,19 +22,11 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
-fn keyword_or_identifier(word: &str) -> Token {
-    match word {
-        "for" => Token::For,
-        "in" => Token::In,
-        "range" => Token::Range,
-        "through" => Token::Through,
-        "true" => Token::True,
-        "false" => Token::False,
-        _ => Token::Identifier(word.to_string()),
-    }
+fn push_token(tokens: &mut Vec<Token>, kind: TokenKind, line: usize) {
+    tokens.push(Token::new(kind, line));
 }
 
-fn lex_line(line: &str) -> Vec<Token> {
+fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let chars: Vec<char> = line.chars().collect();
     let mut pos = 0;
@@ -39,77 +34,120 @@ fn lex_line(line: &str) -> Vec<Token> {
     while pos < chars.len() {
         let ch = chars[pos];
 
+        // skip spaces inside a line — indentation is handled elsewhere
         if ch.is_whitespace() {
             pos += 1;
             continue;
         }
 
         if ch == '(' {
-            tokens.push(Token::LeftParen);
+            push_token(&mut tokens, TokenKind::LeftParen, line_number);
             pos += 1;
             continue;
         }
 
         if ch == ')' {
-            tokens.push(Token::RightParen);
+            push_token(&mut tokens, TokenKind::RightParen, line_number);
             pos += 1;
             continue;
         }
 
         if ch == '[' {
-            tokens.push(Token::LeftBracket);
+            push_token(&mut tokens, TokenKind::LeftBracket, line_number);
             pos += 1;
             continue;
         }
 
         if ch == ']' {
-            tokens.push(Token::RightBracket);
+            push_token(&mut tokens, TokenKind::RightBracket, line_number);
             pos += 1;
             continue;
         }
 
         if ch == ';' {
-            tokens.push(Token::Semicolon);
+            push_token(&mut tokens, TokenKind::Semicolon, line_number);
             pos += 1;
             continue;
         }
 
         if ch == ',' {
-            tokens.push(Token::Comma);
+            push_token(&mut tokens, TokenKind::Comma, line_number);
             pos += 1;
             continue;
         }
 
         if ch == '+' {
-            tokens.push(Token::Plus);
-            pos += 1;
-            continue;
-        }
-
-        if ch == '-' {
-            tokens.push(Token::Minus);
+            push_token(&mut tokens, TokenKind::Plus, line_number);
             pos += 1;
             continue;
         }
 
         if ch == '*' {
-            tokens.push(Token::Star);
+            push_token(&mut tokens, TokenKind::Star, line_number);
             pos += 1;
             continue;
         }
 
         if ch == '/' {
-            tokens.push(Token::Slash);
+            push_token(&mut tokens, TokenKind::Slash, line_number);
             pos += 1;
             continue;
         }
 
+        // two-character operators like == and !=
         if ch == '=' {
-            tokens.push(Token::Equal);
+            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                push_token(&mut tokens, TokenKind::EqualEqual, line_number);
+                pos += 2;
+            } else {
+                push_token(&mut tokens, TokenKind::Equal, line_number);
+                pos += 1;
+            }
+            continue;
+        }
+
+        if ch == '!' {
+            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                push_token(&mut tokens, TokenKind::BangEqual, line_number);
+                pos += 2;
+            } else {
+                panic!(
+                    "Line {}: I only know != as a pair! A lonely ! is confusing.",
+                    line_number
+                );
+            }
+            continue;
+        }
+
+        if ch == '<' {
+            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                push_token(&mut tokens, TokenKind::LessEqual, line_number);
+                pos += 2;
+            } else {
+                push_token(&mut tokens, TokenKind::Less, line_number);
+                pos += 1;
+            }
+            continue;
+        }
+
+        if ch == '>' {
+            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                push_token(&mut tokens, TokenKind::GreaterEqual, line_number);
+                pos += 2;
+            } else {
+                push_token(&mut tokens, TokenKind::Greater, line_number);
+                pos += 1;
+            }
+            continue;
+        }
+
+        if ch == '-' {
+            push_token(&mut tokens, TokenKind::Minus, line_number);
             pos += 1;
             continue;
         }
 
+        // strings live inside "quotes"
         if ch == '"' {
             pos += 1;
             let mut string_content = String::new();
@@ -120,32 +158,47 @@ fn lex_line(line: &str) -> Vec<Token> {
             }
 
             if pos >= chars.len() {
-                panic!("Oops! You started a string with \" but never closed it!");
+                panic!(
+                    "Line {}: Oops! You started a string with \" but never closed it!",
+                    line_number
+                );
             }
 
             pos += 1;
-            tokens.push(Token::StringLiteral(string_content));
+            push_token(
+                &mut tokens,
+                TokenKind::StringLiteral(string_content),
+                line_number,
+            );
             continue;
         }
 
+        // chars live inside 'quotes' and are exactly one letter
         if ch == '\'' {
             pos += 1;
             if pos >= chars.len() {
-                panic!("Oops! You started a char with ' but never closed it!");
+                panic!(
+                    "Line {}: Oops! You started a char with ' but never closed it!",
+                    line_number
+                );
             }
 
             let char_value = chars[pos];
             pos += 1;
 
             if pos >= chars.len() || chars[pos] != '\'' {
-                panic!("Oops! A char literal must be exactly one character like 'h'");
+                panic!(
+                    "Line {}: A char must be exactly one character like 'h'",
+                    line_number
+                );
             }
 
             pos += 1;
-            tokens.push(Token::CharLiteral(char_value));
+            push_token(&mut tokens, TokenKind::CharLiteral(char_value), line_number);
             continue;
         }
 
+        // numbers can be whole or have a dot for decimals
         if ch.is_ascii_digit() {
             let mut number_text = String::new();
             let mut is_float = false;
@@ -153,7 +206,7 @@ fn lex_line(line: &str) -> Vec<Token> {
             while pos < chars.len() && (chars[pos].is_ascii_digit() || chars[pos] == '.') {
                 if chars[pos] == '.' {
                     if is_float {
-                        panic!("Invalid number: too many decimal points");
+                        panic!("Line {}: Invalid number: too many decimal points", line_number);
                     }
                     is_float = true;
                 }
@@ -162,19 +215,20 @@ fn lex_line(line: &str) -> Vec<Token> {
             }
 
             if is_float {
-                let value: f64 = number_text
-                    .parse()
-                    .unwrap_or_else(|_| panic!("Invalid float number: {}", number_text));
-                tokens.push(Token::FloatLiteral(value));
+                let value: f64 = number_text.parse().unwrap_or_else(|_| {
+                    panic!("Line {}: Invalid float number: {}", line_number, number_text)
+                });
+                push_token(&mut tokens, TokenKind::FloatLiteral(value), line_number);
             } else {
-                let value: i64 = number_text
-                    .parse()
-                    .unwrap_or_else(|_| panic!("Invalid number: {}", number_text));
-                tokens.push(Token::NumberLiteral(value));
+                let value: i64 = number_text.parse().unwrap_or_else(|_| {
+                    panic!("Line {}: Invalid number: {}", line_number, number_text)
+                });
+                push_token(&mut tokens, TokenKind::NumberLiteral(value), line_number);
             }
             continue;
         }
 
+        // words can be keywords or variable names
         if ch.is_alphabetic() || ch == '_' {
             let mut word = String::new();
 
@@ -183,13 +237,17 @@ fn lex_line(line: &str) -> Vec<Token> {
                 pos += 1;
             }
 
-            tokens.push(keyword_or_identifier(&word));
+            if let Some(keyword) = keyword_token(&word) {
+                push_token(&mut tokens, keyword, line_number);
+            } else {
+                push_token(&mut tokens, TokenKind::Identifier(word), line_number);
+            }
             continue;
         }
 
         panic!(
-            "Yikes! I don't know what this character is: '{}' (found at position {})",
-            ch, pos
+            "Line {}: Yikes! I don't know what this character is: '{}'",
+            line_number, ch
         );
     }
 
@@ -200,12 +258,14 @@ fn measure_indent(line: &str) -> usize {
     line.chars().take_while(|c| *c == ' ' || *c == '\t').count()
 }
 
-/// Lex the entire source and emit indentation-aware tokens.
+/// turn the whole source file into a token list with indent/dedent markers
 pub fn lex(source: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut indent_stack: Vec<usize> = vec![0];
+    let mut line_number = 0;
 
     for raw_line in source.lines() {
+        line_number += 1;
         let line = strip_comment(raw_line);
         let trimmed = line.trim();
 
@@ -215,27 +275,35 @@ pub fn lex(source: &str) -> Vec<Token> {
 
         let indent = measure_indent(line);
 
+        // less indent means a block ended — pop dedent tokens
         while indent < *indent_stack.last().unwrap() {
             indent_stack.pop();
-            tokens.push(Token::Dedent);
+            push_token(&mut tokens, TokenKind::Dedent, line_number);
         }
 
+        // more indent means a new block started — push indent token
         if indent > *indent_stack.last().unwrap() {
             indent_stack.push(indent);
-            tokens.push(Token::Indent);
+            push_token(&mut tokens, TokenKind::Indent, line_number);
         }
 
-        tokens.extend(lex_line(trimmed));
-        tokens.push(Token::Newline);
+        tokens.extend(lex_line(trimmed, line_number));
+        push_token(&mut tokens, TokenKind::Newline, line_number);
     }
 
+    // close any blocks still open at the end of the file
     while indent_stack.len() > 1 {
         indent_stack.pop();
-        tokens.push(Token::Dedent);
+        push_token(&mut tokens, TokenKind::Dedent, line_number);
     }
 
-    tokens.push(Token::EOF);
+    push_token(&mut tokens, TokenKind::EOF, line_number);
     tokens
+}
+
+// tiny helper so parser can ask "is this the print function name?"
+pub fn is_print_function(name: &str) -> bool {
+    name == SYNTAX.print_fn
 }
 
 // =============================================================================
@@ -246,24 +314,32 @@ pub fn lex(source: &str) -> Vec<Token> {
 mod tests {
     // we need the stuff from this same file
     use super::*;
-    // we need to know what Token looks like so we can check our answers
-    use crate::token::Token;
+    // we need TokenKind to check what kind of slice each token is
+    use crate::token::TokenKind;
 
     // -------------------------------------------------------------------------
-    // helper: pull out only the "real" tokens (not spaces/newlines/end marks)
+    // helper: pull out only the "real" token kinds (not newlines/indents/end)
     // why? because we mostly care about words and symbols, not the glue between
     // -------------------------------------------------------------------------
-    fn without_structure(tokens: &[Token]) -> Vec<Token> {
+    fn without_structure(tokens: &[Token]) -> Vec<TokenKind> {
         tokens
             .iter()
-            .filter(|t| {
+            .map(|token| token.kind.clone())
+            .filter(|kind| {
                 !matches!(
-                    t,
-                    Token::Newline | Token::Indent | Token::Dedent | Token::EOF
+                    kind,
+                    TokenKind::Newline | TokenKind::Indent | TokenKind::Dedent | TokenKind::EOF
                 )
             })
-            .cloned()
             .collect()
+    }
+
+    // -------------------------------------------------------------------------
+    // helper: check if the token list has a certain kind somewhere in it
+    // why? indent/dedent tests need this because tokens also have line numbers
+    // -------------------------------------------------------------------------
+    fn has_kind(tokens: &[Token], kind: TokenKind) -> bool {
+        tokens.iter().any(|token| token.kind == kind)
     }
 
     // -------------------------------------------------------------------------
@@ -282,10 +358,10 @@ mod tests {
         assert_eq!(
             important,
             vec![
-                Token::Identifier("out".into()),
-                Token::LeftParen,
-                Token::StringLiteral("hi".into()),
-                Token::RightParen,
+                TokenKind::Identifier("out".into()),
+                TokenKind::LeftParen,
+                TokenKind::StringLiteral("hi".into()),
+                TokenKind::RightParen,
             ]
         );
     }
@@ -303,10 +379,10 @@ mod tests {
         assert_eq!(
             important,
             vec![
-                Token::Identifier("out".into()),
-                Token::LeftParen,
-                Token::StringLiteral("ok".into()),
-                Token::RightParen,
+                TokenKind::Identifier("out".into()),
+                TokenKind::LeftParen,
+                TokenKind::StringLiteral("ok".into()),
+                TokenKind::RightParen,
             ]
         );
     }
@@ -320,8 +396,8 @@ mod tests {
         let tokens = lex("x = 42\nf = 3.14");
         let important = without_structure(&tokens);
 
-        assert!(important.contains(&Token::NumberLiteral(42)));
-        assert!(important.contains(&Token::FloatLiteral(3.14)));
+        assert!(important.contains(&TokenKind::NumberLiteral(42)));
+        assert!(important.contains(&TokenKind::FloatLiteral(3.14)));
     }
 
     // -------------------------------------------------------------------------
@@ -336,12 +412,12 @@ mod tests {
         assert_eq!(
             important,
             vec![
-                Token::For,
-                Token::In,
-                Token::Range,
-                Token::Through,
-                Token::True,
-                Token::False,
+                TokenKind::For,
+                TokenKind::In,
+                TokenKind::Range,
+                TokenKind::Through,
+                TokenKind::True,
+                TokenKind::False,
             ]
         );
     }
@@ -356,8 +432,8 @@ mod tests {
         let source = "outer()\n    inner()";
         let tokens = lex(source);
 
-        assert!(tokens.contains(&Token::Indent));
-        assert!(tokens.contains(&Token::Dedent));
+        assert!(has_kind(&tokens, TokenKind::Indent));
+        assert!(has_kind(&tokens, TokenKind::Dedent));
     }
 
     // -------------------------------------------------------------------------
@@ -369,10 +445,10 @@ mod tests {
         let tokens = lex("a + b - c * d / e = f");
         let important = without_structure(&tokens);
 
-        assert!(important.contains(&Token::Plus));
-        assert!(important.contains(&Token::Minus));
-        assert!(important.contains(&Token::Star));
-        assert!(important.contains(&Token::Slash));
-        assert!(important.contains(&Token::Equal));
+        assert!(important.contains(&TokenKind::Plus));
+        assert!(important.contains(&TokenKind::Minus));
+        assert!(important.contains(&TokenKind::Star));
+        assert!(important.contains(&TokenKind::Slash));
+        assert!(important.contains(&TokenKind::Equal));
     }
 }

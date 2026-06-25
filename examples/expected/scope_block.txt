@@ -1,0 +1,3 @@
+42
+outside still works
+I am global

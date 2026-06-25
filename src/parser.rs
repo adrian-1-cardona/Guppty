@@ -1,8 +1,9 @@
 // === parser.rs ===
-// The parser figures out what tokens MEAN together and builds the AST.
+// the parser is a detective — it reads tokens and figures out the story!
+// it builds the AST tree so the interpreter knows what to run and in what order.
 
-use crate::ast::{BinaryOp, Expr, Program, Stmt};
-use crate::token::Token;
+use crate::ast::{BinaryOp, Expr, Program, Stmt, UnaryOp};
+use crate::token::{Token, TokenKind};
 
 struct Parser {
     tokens: Vec<Token>,
@@ -14,43 +15,53 @@ impl Parser {
         Parser { tokens, pos: 0 }
     }
 
-    fn current(&self) -> &Token {
+    fn current(&self) -> &TokenKind {
         if self.pos >= self.tokens.len() {
-            &Token::EOF
+            &TokenKind::EOF
         } else {
-            &self.tokens[self.pos]
+            &self.tokens[self.pos].kind
         }
     }
 
-    fn peek(&self, offset: usize) -> &Token {
+    fn current_line(&self) -> usize {
+        if self.pos >= self.tokens.len() {
+            0
+        } else {
+            self.tokens[self.pos].line
+        }
+    }
+
+    fn peek(&self, offset: usize) -> &TokenKind {
         let index = self.pos + offset;
         if index >= self.tokens.len() {
-            &Token::EOF
+            &TokenKind::EOF
         } else {
-            &self.tokens[index]
+            &self.tokens[index].kind
         }
     }
 
-    fn advance(&mut self) -> Token {
-        let token = self.tokens[self.pos].clone();
+    fn advance(&mut self) -> TokenKind {
+        let kind = self.tokens[self.pos].kind.clone();
         self.pos += 1;
-        token
+        kind
     }
 
-    fn expect(&mut self, expected: &Token) {
+    fn expect_kind(&mut self, expected: &TokenKind) {
         let current = self.current().clone();
         if &current == expected {
             self.advance();
         } else {
             panic!(
-                "Parser error! Expected {:?} but found {:?}",
-                expected, current
+                "Line {}: Parser error! Expected {:?} but found {:?}",
+                self.current_line(),
+                expected,
+                current
             );
         }
     }
 
     fn skip_newlines(&mut self) {
-        while *self.current() == Token::Newline {
+        while *self.current() == TokenKind::Newline {
             self.advance();
         }
     }
@@ -59,51 +70,70 @@ impl Parser {
         let mut statements: Vec<Stmt> = Vec::new();
 
         self.skip_newlines();
-        while *self.current() != Token::EOF {
-            let stmt = self.parse_statement();
-            statements.push(stmt);
+        while *self.current() != TokenKind::EOF {
+            statements.push(self.parse_statement());
             self.skip_newlines();
         }
 
         statements
     }
 
+    /// read an indented block — everything pushed in one tab level
     fn parse_block(&mut self) -> Vec<Stmt> {
-        self.expect(&Token::Indent);
+        self.expect_kind(&TokenKind::Indent);
         let mut statements: Vec<Stmt> = Vec::new();
 
         self.skip_newlines();
-        while *self.current() != Token::Dedent && *self.current() != Token::EOF {
+        while *self.current() != TokenKind::Dedent && *self.current() != TokenKind::EOF {
             statements.push(self.parse_statement());
             self.skip_newlines();
         }
 
-        if *self.current() == Token::Dedent {
+        if *self.current() == TokenKind::Dedent {
             self.advance();
         }
 
         statements
     }
 
+    /// a block if indented, otherwise one single statement
+    fn parse_block_or_single(&mut self) -> Vec<Stmt> {
+        if *self.current() == TokenKind::Indent {
+            self.parse_block()
+        } else {
+            vec![self.parse_statement()]
+        }
+    }
+
     fn parse_statement(&mut self) -> Stmt {
+        // return 5  or  return
+        if *self.current() == TokenKind::Return {
+            return self.parse_return_statement();
+        }
+
+        // if condition ... else ...
+        if *self.current() == TokenKind::If {
+            return self.parse_if_statement();
+        }
+
+        // while condition ...
+        if *self.current() == TokenKind::While {
+            return self.parse_while_loop();
+        }
+
         // for i in range(1 through 6)
-        if *self.current() == Token::For {
+        if *self.current() == TokenKind::For {
             return self.parse_for_loop();
         }
 
-        // name = value;
-        if let Token::Identifier(name) = self.current().clone() {
-            if *self.peek(1) == Token::Equal {
+        // name = value  OR  name(args) { block }  OR  just an expression
+        if let TokenKind::Identifier(name) = self.current().clone() {
+            if *self.peek(1) == TokenKind::Equal {
                 return self.parse_variable_declaration(name);
             }
 
-            // name() followed by indented block => function definition
-            if *self.peek(1) == Token::LeftParen
-                && *self.peek(2) == Token::RightParen
-                && (*self.peek(3) == Token::Newline || *self.peek(3) == Token::Indent)
-            {
-                let next = self.peek(4);
-                if *self.peek(3) == Token::Indent || *next == Token::Indent {
+            if *self.peek(1) == TokenKind::LeftParen {
+                if self.looks_like_function_definition() {
                     return self.parse_function_def(name);
                 }
             }
@@ -114,34 +144,89 @@ impl Parser {
         Stmt::ExpressionStatement(expr)
     }
 
+    /// tell function definitions apart from function calls
+    /// a definition MUST have an indented block after the closing paren!
+    fn looks_like_function_definition(&self) -> bool {
+        let mut index = self.pos + 2;
+        let mut depth = 1;
+
+        while index < self.tokens.len() {
+            match &self.tokens[index].kind {
+                TokenKind::LeftParen => depth += 1,
+                TokenKind::RightParen => {
+                    depth -= 1;
+                    if depth == 0 {
+                        let mut next_index = index + 1;
+                        while next_index < self.tokens.len()
+                            && self.tokens[next_index].kind == TokenKind::Newline
+                        {
+                            next_index += 1;
+                        }
+
+                        return self.tokens[next_index].kind == TokenKind::Indent;
+                    }
+                }
+                _ => {}
+            }
+            index += 1;
+        }
+
+        false
+    }
+
     fn parse_function_def(&mut self, name: String) -> Stmt {
-        self.advance(); // identifier already known
-        self.expect(&Token::LeftParen);
-        self.expect(&Token::RightParen);
+        self.advance(); // identifier
+        self.expect_kind(&TokenKind::LeftParen);
+
+        let mut params: Vec<String> = Vec::new();
+        if *self.current() != TokenKind::RightParen {
+            loop {
+                match self.advance() {
+                    TokenKind::Identifier(param) => params.push(param),
+                    other => panic!(
+                        "Line {}: Function parameters need names, found {:?}",
+                        self.current_line(),
+                        other
+                    ),
+                }
+
+                if *self.current() == TokenKind::Comma {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        self.expect_kind(&TokenKind::RightParen);
         self.skip_newlines();
 
-        let body = if *self.current() == Token::Indent {
+        let body = if *self.current() == TokenKind::Indent {
             self.parse_block()
         } else {
             Vec::new()
         };
 
-        Stmt::FunctionDef { name, body }
+        Stmt::FunctionDef { name, params, body }
     }
 
     fn parse_for_loop(&mut self) -> Stmt {
-        self.expect(&Token::For);
+        self.expect_kind(&TokenKind::For);
 
         let variable = match self.advance() {
-            Token::Identifier(name) => name,
-            other => panic!("Expected a loop variable name, found {:?}", other),
+            TokenKind::Identifier(name) => name,
+            other => panic!(
+                "Line {}: Expected a loop variable name, found {:?}",
+                self.current_line(),
+                other
+            ),
         };
 
-        self.expect(&Token::In);
+        self.expect_kind(&TokenKind::In);
         let iterable = self.parse_expression();
         self.skip_newlines();
 
-        let body = if *self.current() == Token::Indent {
+        let body = if *self.current() == TokenKind::Indent {
             self.parse_block()
         } else {
             Vec::new()
@@ -154,9 +239,73 @@ impl Parser {
         }
     }
 
+    fn parse_while_loop(&mut self) -> Stmt {
+        self.expect_kind(&TokenKind::While);
+        let condition = self.parse_expression();
+        self.skip_newlines();
+
+        let body = self.parse_block_or_single();
+
+        Stmt::WhileLoop { condition, body }
+    }
+
+    fn parse_if_statement(&mut self) -> Stmt {
+        self.expect_kind(&TokenKind::If);
+        let condition = self.parse_expression();
+        self.skip_newlines();
+
+        let then_branch = self.parse_block_or_single();
+        self.skip_newlines();
+
+        let else_branch = if *self.current() == TokenKind::Else {
+            self.advance();
+            self.skip_newlines();
+            Some(self.parse_block_or_single())
+        } else {
+            None
+        };
+
+        Stmt::IfStatement {
+            condition,
+            then_branch,
+            else_branch,
+        }
+    }
+
+    fn parse_return_statement(&mut self) -> Stmt {
+        self.expect_kind(&TokenKind::Return);
+
+        let value = if self.is_expression_start() {
+            Some(self.parse_expression())
+        } else {
+            None
+        };
+
+        self.consume_optional_semicolon();
+        Stmt::ReturnStatement { value }
+    }
+
+    fn is_expression_start(&self) -> bool {
+        matches!(
+            self.current(),
+            TokenKind::StringLiteral(_)
+                | TokenKind::CharLiteral(_)
+                | TokenKind::NumberLiteral(_)
+                | TokenKind::FloatLiteral(_)
+                | TokenKind::True
+                | TokenKind::False
+                | TokenKind::LeftParen
+                | TokenKind::LeftBracket
+                | TokenKind::Range
+                | TokenKind::Minus
+                | TokenKind::Not
+                | TokenKind::Identifier(_)
+        )
+    }
+
     fn parse_variable_declaration(&mut self, name: String) -> Stmt {
         self.advance(); // identifier
-        self.expect(&Token::Equal);
+        self.expect_kind(&TokenKind::Equal);
         let value = self.parse_expression();
         self.consume_optional_semicolon();
 
@@ -164,16 +313,127 @@ impl Parser {
     }
 
     fn consume_optional_semicolon(&mut self) {
-        if *self.current() == Token::Semicolon {
+        if *self.current() == TokenKind::Semicolon {
             self.advance();
         }
-        if *self.current() == Token::Newline {
+        if *self.current() == TokenKind::Newline {
             self.advance();
         }
     }
 
     fn parse_expression(&mut self) -> Expr {
-        self.parse_additive()
+        self.parse_or()
+    }
+
+    // or has the lowest priority — it decides last
+    fn parse_or(&mut self) -> Expr {
+        let mut expr = self.parse_and();
+
+        while *self.current() == TokenKind::Or {
+            self.advance();
+            let right = self.parse_and();
+            expr = Expr::BinaryOp {
+                left: Box::new(expr),
+                op: BinaryOp::Or,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn parse_and(&mut self) -> Expr {
+        let mut expr = self.parse_equality();
+
+        while *self.current() == TokenKind::And {
+            self.advance();
+            let right = self.parse_equality();
+            expr = Expr::BinaryOp {
+                left: Box::new(expr),
+                op: BinaryOp::And,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn parse_equality(&mut self) -> Expr {
+        let mut expr = self.parse_comparison();
+
+        loop {
+            match self.current() {
+                TokenKind::EqualEqual => {
+                    self.advance();
+                    let right = self.parse_comparison();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Equal,
+                        right: Box::new(right),
+                    };
+                }
+                TokenKind::BangEqual => {
+                    self.advance();
+                    let right = self.parse_comparison();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::NotEqual,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        expr
+    }
+
+    fn parse_comparison(&mut self) -> Expr {
+        let mut expr = self.parse_additive();
+
+        loop {
+            match self.current() {
+                TokenKind::Less => {
+                    self.advance();
+                    let right = self.parse_additive();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Less,
+                        right: Box::new(right),
+                    };
+                }
+                TokenKind::Greater => {
+                    self.advance();
+                    let right = self.parse_additive();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Greater,
+                        right: Box::new(right),
+                    };
+                }
+                TokenKind::LessEqual => {
+                    self.advance();
+                    let right = self.parse_additive();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::LessEqual,
+                        right: Box::new(right),
+                    };
+                }
+                TokenKind::GreaterEqual => {
+                    self.advance();
+                    let right = self.parse_additive();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::GreaterEqual,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        expr
     }
 
     fn parse_additive(&mut self) -> Expr {
@@ -181,7 +441,7 @@ impl Parser {
 
         loop {
             match self.current() {
-                Token::Plus => {
+                TokenKind::Plus => {
                     self.advance();
                     let right = self.parse_multiplicative();
                     expr = Expr::BinaryOp {
@@ -190,7 +450,7 @@ impl Parser {
                         right: Box::new(right),
                     };
                 }
-                Token::Minus => {
+                TokenKind::Minus => {
                     self.advance();
                     let right = self.parse_multiplicative();
                     expr = Expr::BinaryOp {
@@ -207,22 +467,22 @@ impl Parser {
     }
 
     fn parse_multiplicative(&mut self) -> Expr {
-        let mut expr = self.parse_primary();
+        let mut expr = self.parse_unary();
 
         loop {
             match self.current() {
-                Token::Star => {
+                TokenKind::Star => {
                     self.advance();
-                    let right = self.parse_primary();
+                    let right = self.parse_unary();
                     expr = Expr::BinaryOp {
                         left: Box::new(expr),
                         op: BinaryOp::Mul,
                         right: Box::new(right),
                     };
                 }
-                Token::Slash => {
+                TokenKind::Slash => {
                     self.advance();
-                    let right = self.parse_primary();
+                    let right = self.parse_unary();
                     expr = Expr::BinaryOp {
                         left: Box::new(expr),
                         op: BinaryOp::Div,
@@ -236,76 +496,105 @@ impl Parser {
         expr
     }
 
+    fn parse_unary(&mut self) -> Expr {
+        if *self.current() == TokenKind::Not {
+            self.advance();
+            let operand = self.parse_unary();
+            return Expr::UnaryOp {
+                op: UnaryOp::Not,
+                operand: Box::new(operand),
+            };
+        }
+
+        if *self.current() == TokenKind::Minus {
+            self.advance();
+            let operand = self.parse_unary();
+            return Expr::UnaryOp {
+                op: UnaryOp::Negate,
+                operand: Box::new(operand),
+            };
+        }
+
+        self.parse_primary()
+    }
+
     fn parse_primary(&mut self) -> Expr {
         match self.current().clone() {
-            Token::StringLiteral(s) => {
+            TokenKind::StringLiteral(s) => {
                 self.advance();
                 Expr::StringLiteral(s)
             }
-            Token::CharLiteral(ch) => {
+            TokenKind::CharLiteral(ch) => {
                 self.advance();
                 Expr::CharLiteral(ch)
             }
-            Token::NumberLiteral(n) => {
+            TokenKind::NumberLiteral(n) => {
                 self.advance();
                 Expr::NumberLiteral(n)
             }
-            Token::FloatLiteral(f) => {
+            TokenKind::FloatLiteral(f) => {
                 self.advance();
                 Expr::FloatLiteral(f)
             }
-            Token::True => {
+            TokenKind::True => {
                 self.advance();
                 Expr::BoolLiteral(true)
             }
-            Token::False => {
+            TokenKind::False => {
                 self.advance();
                 Expr::BoolLiteral(false)
             }
-            Token::LeftBracket => {
+            TokenKind::LeftBracket => {
                 self.advance();
-                if *self.current() == Token::RightBracket {
+                if *self.current() == TokenKind::RightBracket {
                     self.advance();
                     Expr::ArrayLiteral(Vec::new())
                 } else {
-                    panic!("Only empty arrays [] are supported right now");
+                    panic!(
+                        "Line {}: Only empty arrays [] are supported right now",
+                        self.current_line()
+                    );
                 }
             }
-            Token::Range => {
+            TokenKind::Range => {
                 self.advance();
                 self.parse_range_expr()
             }
-            Token::Identifier(name) => {
+            TokenKind::Identifier(name) => {
                 self.advance();
 
-                if *self.current() == Token::LeftParen {
+                if *self.current() == TokenKind::LeftParen {
                     self.advance();
                     let mut args: Vec<Expr> = Vec::new();
 
-                    while *self.current() != Token::RightParen {
+                    while *self.current() != TokenKind::RightParen {
                         args.push(self.parse_expression());
-                        if *self.current() == Token::Comma {
+                        if *self.current() == TokenKind::Comma {
                             self.advance();
                         }
                     }
 
-                    self.expect(&Token::RightParen);
+                    self.expect_kind(&TokenKind::RightParen);
                     Expr::FunctionCall { name, args }
                 } else {
                     Expr::Variable(name)
                 }
             }
-            other => panic!("I don't understand this token in an expression: {:?}", other),
+            other => panic!(
+                "Line {}: I don't understand this token in an expression: {:?}",
+                self.current_line(),
+                other
+            ),
         }
     }
 
     fn parse_range_expr(&mut self) -> Expr {
-        self.expect(&Token::LeftParen);
+        self.expect_kind(&TokenKind::LeftParen);
 
         let start = self.parse_expression();
-        self.expect(&Token::Through);
+        self.expect_kind(&TokenKind::Through);
         let end = self.parse_expression();
-        self.expect(&Token::RightParen);
+        self.expect_kind(&TokenKind::RightParen);
 
         Expr::Range {
             start: Box::new(start),
@@ -450,8 +739,9 @@ mod tests {
         let program = parse_source(source);
 
         match &program[0] {
-            Stmt::FunctionDef { name, body } => {
+            Stmt::FunctionDef { name, params, body } => {
                 assert_eq!(name, "greet");
+                assert!(params.is_empty());
                 assert_eq!(body.len(), 1);
             }
             other => panic!("expected function def, got {:?}", other),
