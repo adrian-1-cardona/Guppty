@@ -1,8 +1,8 @@
 # Guppty
 
 Guppty is a small indentation-based programming language implemented in Rust.
-It reads `.gup` files, turns them into tokens and an AST, then interprets the
-program directly from the terminal.
+It reads `.gup` files, turns them into tokens and an AST, compiles to bytecode,
+and runs the program on a stack-based virtual machine from the terminal.
 
 ## Why
 
@@ -18,6 +18,12 @@ Prerequisite: install Rust once from <https://rustup.rs>.
 
 ```bash
 cargo run -- examples/program.gup
+```
+
+The VM is the default backend. Use `--interp` for the legacy tree-walking interpreter:
+
+```bash
+cargo run -- examples/program.gup --interp
 ```
 
 Expected output:
@@ -58,17 +64,23 @@ More examples live in `examples/`. Expected output files live in
 flowchart LR
     Source[".gup source file"] --> Lexer["Lexer<br/>src/lexer.rs<br/>source -> tokens"]
     Lexer --> Parser["Parser<br/>src/parser.rs<br/>tokens -> AST"]
-    Parser --> Interpreter["Interpreter<br/>src/interpreter.rs<br/>AST -> runtime behavior"]
-    Interpreter --> Output["stdout"]
+    Parser --> Compiler["Compiler<br/>src/compiler.rs<br/>AST -> bytecode"]
+    Compiler --> VM["VM<br/>src/vm.rs<br/>bytecode -> stdout"]
+    Parser -.->|"--interp"| Interpreter["Interpreter<br/>src/interpreter.rs<br/>AST -> runtime behavior"]
+    Interpreter -.-> Output["stdout"]
+    VM --> Output
+    Bytecode["Bytecode<br/>src/bytecode.rs<br/>opcodes + constant pool"] --> Compiler
+    Bytecode --> VM
     Syntax["Syntax config<br/>src/syntax.rs"] --> Lexer
     AST["AST types<br/>src/ast.rs"] --> Parser
-    Env["Environment + values<br/>src/environment.rs<br/>src/value.rs"] --> Interpreter
+    Values["Values<br/>src/value.rs"] --> VM
+    Values --> Interpreter
 ```
 
 ## Project Layout
 
 ```text
-src/                 Rust interpreter implementation
+src/                 Rust compiler + VM (and legacy interpreter)
 examples/            Runnable .gup programs
 examples/expected/   Expected stdout for example tests
 tests/               Integration tests for the language pipeline
