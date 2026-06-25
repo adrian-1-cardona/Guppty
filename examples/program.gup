@@ -1,0 +1,9 @@
+// This is program.gup — a tiny Guppty program.
+// Run it with: guppty examples/program.gup
+
+out("Hi! I am program.gup")
+out("Guppty is working!")
+
+x = 2
+y = 3
+out(x + y)

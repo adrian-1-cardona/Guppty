@@ -1,22 +1,65 @@
 # Guppty
-We just getting started 
 
-## Flow 
-hello.gup → lexer → parser → interpreter → output
+A small programming language you can run from the terminal.
 
-## Footmotes
-right now it's a rust interpreter , later will be compiled in C 
+## Quick start — run an example
 
-## how to run 
-Run this in your terminal:
+```bash
+# 1. Set up Rust (once)
 source "$HOME/.cargo/env"
 
-then: 
-guppty examples/hello.gup
+# 2. Build
+cargo build
 
-# Testing 
-always run: 
-cargo build 
+# 3. Run the example program
+./target/debug/guppty examples/program.gup
+```
 
-then 
-cargo run -- examples/programname.gup
+You should see:
+
+```
+Hi! I am program.gup
+Guppty is working!
+5
+```
+
+## Install `guppty` (optional)
+
+After this, you can type `guppty` from anywhere:
+
+```bash
+cargo install --path .
+guppty examples/program.gup
+```
+
+## More help
+
+See **[HOW_TO_RUN.md](HOW_TO_RUN.md)** for step-by-step instructions, other examples, and troubleshooting.
+
+## How it works
+
+```
+hello.gup → lexer → parser → interpreter → output
+```
+
+Right now Guppty is a Rust interpreter. A C compiler may come later.
+
+## Example files
+
+| File | What it does |
+|------|----------------|
+| `examples/program.gup` | Start here — simple demo |
+| `examples/hello.gup` | Prints "Hello World!" |
+| `examples/math.gup` | Numbers and math |
+| `examples/variables.gup` | Variables |
+| `examples/for_loop.gup` | Loops |
+| `examples/functions.gup` | Functions |
+| `examples/comments.gup` | Comments |
+| `examples/all_features.gup` | Everything together |
+
+## Development
+
+```bash
+cargo build
+cargo run -- examples/program.gup
+```
