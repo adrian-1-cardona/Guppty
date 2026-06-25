@@ -1,0 +1,25 @@
+name: Backfill Solved Issues
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure solved label exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "solved" --repo "${{ github.repository }}" --color "0E8A16" --description "Work completed and merged" 2>/dev/null || true
+
+      - name: Create, assign, and close solved issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/create-solved-issues.sh
