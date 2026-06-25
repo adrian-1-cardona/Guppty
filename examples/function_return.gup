@@ -1,0 +1,16 @@
+// return sends a value back to whoever called the function!
+// without return, functions give you nothing — like an empty box!
+
+square(n)
+    return n * n
+
+add(a, b)
+    return a + b
+
+out(square(5))
+out(add(10, 32))
+
+makeMessage(name)
+    return "Hello " + name
+
+out(makeMessage("Guppy"))

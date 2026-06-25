@@ -1,0 +1,10 @@
+// while keeps going round and round until the condition becomes false!
+// like counting down before blastoff!
+
+count = 5
+
+while count > 0
+    out(count)
+    count = count - 1
+
+out("Blastoff!")

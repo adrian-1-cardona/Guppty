@@ -1,11 +1,8 @@
 # Guppty Grammar
 
-This describes the rules for how Guppty code is structured.
-Think of it like the grammar rules for English, but for code!
+This grammar matches the interpreter in `src/`. Keywords live in `src/syntax.rs` so you can change them in one place.
 
 ## Program
-
-A program is one or more statements, executed top to bottom.
 
 ```
 program        → statement* EOF
@@ -13,42 +10,78 @@ program        → statement* EOF
 
 ## Statements
 
-A statement is a complete instruction. It ends with an optional semicolon.
-
 ```
 statement      → expression_stmt
-expression_stmt → expression ";"?
+               | variable_decl
+               | function_def
+               | if_stmt
+               | while_stmt
+               | for_stmt
+               | return_stmt
+
+expression_stmt→ expression (";" | NEWLINE)?
+
+variable_decl  → IDENTIFIER "=" expression (";" | NEWLINE)?
+
+function_def   → IDENTIFIER "(" parameters? ")" NEWLINE INDENT statement* DEDENT
+
+if_stmt        → "if" expression NEWLINE block
+                 ("else" NEWLINE block)?
+
+while_stmt     → "while" expression NEWLINE block
+
+for_stmt       → "for" IDENTIFIER "in" expression NEWLINE INDENT statement* DEDENT
+
+return_stmt    → "return" expression? (";" | NEWLINE)?
+
+block          → INDENT statement* DEDENT
+               | statement
 ```
 
-## Expressions
-
-An expression is something that produces a value.
+## Expressions (precedence low → high)
 
 ```
-expression     → function_call | string_literal
-function_call  → IDENTIFIER "(" arguments? ")"
-arguments      → expression ("," expression)*
-string_literal → '"' <any characters> '"'
+expression     → or_expr
+or_expr        → and_expr ("or" and_expr)*
+and_expr       → equality ("and" equality)*
+equality       → comparison (("==" | "!=") comparison)*
+comparison     → additive (("<" | ">" | "<=" | ">=") additive)*
+additive       → multiplicative (("+" | "-") multiplicative)*
+multiplicative → unary (("*" | "/") unary)*
+unary          → ("-" | "not") unary | primary
+primary        → literal
+               | IDENTIFIER
+               | IDENTIFIER "(" arguments? ")"
+               | "range" "(" expression "through" expression ")"
+               | "[" "]"
+```
+
+## Literals
+
+```
+literal        → STRING | CHAR | NUMBER | FLOAT | "true" | "false"
 ```
 
 ## Tokens
 
-```
-IDENTIFIER     → [a-zA-Z_][a-zA-Z0-9_]*
-STRING         → '"' <any character except '"'>* '"'
-SEMICOLON      → ";"
-LEFT_PAREN     → "("
-RIGHT_PAREN    → ")"
-```
+- **Keywords:** `for`, `in`, `range`, `through`, `if`, `else`, `while`, `return`, `and`, `or`, `not`, `true`, `false`
+- **Operators:** `+`, `-`, `*`, `/`, `=`, `==`, `!=`, `<`, `>`, `<=`, `>=`
+- **Structure:** indentation (`INDENT` / `DEDENT`), `//` line comments
 
 ## Built-in Functions
 
-| Function | What it does                | Example              |
-|----------|-----------------------------|----------------------|
-| `out`    | Prints text to the screen   | `out("Hello World")` |
+| Function | Description |
+|----------|-------------|
+| `out(...)` | Print values to stdout (space-separated) |
+
+## Scoping
+
+- Blocks (`if`, `while`, `for`, function bodies) create a new scope.
+- Functions capture their defining environment (closures).
+- `return` exits the current function with an optional value.
 
 ## Notes
 
-- Semicolons are **optional** at the end of statements
-- Whitespace (spaces, tabs, newlines) is ignored between tokens
-- Strings must be wrapped in double quotes `"`
+- Indentation uses spaces or tabs (Python-style).
+- `//` starts a line or inline comment.
+- Function definitions require an indented body after `name(...)`.

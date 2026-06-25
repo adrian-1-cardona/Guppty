@@ -1,0 +1,2 @@
+Comments are ignored by the interpreter
+42

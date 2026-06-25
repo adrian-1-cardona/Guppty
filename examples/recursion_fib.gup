@@ -1,0 +1,11 @@
+// fibonacci numbers — each one is the sum of the two before it!
+// fib(6) walks down and back up the chain using recursion!
+
+fib(n)
+    if n <= 1
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+out(fib(0))
+out(fib(1))
+out(fib(6))

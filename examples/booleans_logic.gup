@@ -1,0 +1,13 @@
+// and, or, and not are logic words for booleans!
+// they let us combine true/false checks in clever ways!
+
+out(true and true)
+out(true and false)
+out(false or true)
+out(false or false)
+out(not false)
+out(not true)
+
+a = 5
+out(a > 3 and a < 10)
+out(a < 0 or a == 5)

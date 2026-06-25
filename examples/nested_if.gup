@@ -1,0 +1,13 @@
+// nested if statements — choices inside choices!
+// like picking lunch AND then picking a drink!
+
+weather = "sunny"
+temperature = 75
+
+if weather == "sunny"
+    if temperature > 70
+        out("Beach day!")
+    else
+        out("Sunny but chilly")
+else
+    out("Stay inside")

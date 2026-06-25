@@ -1,6 +1,6 @@
 // === ast.rs ===
-// AST stands for "Abstract Syntax Tree."
-// Think of it like a family tree, but for your code!
+// AST = abstract syntax tree = a family tree for your code!
+// it shows which parts belong together so the interpreter knows what to do.
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -11,6 +11,10 @@ pub enum Expr {
     BoolLiteral(bool),
     ArrayLiteral(Vec<Expr>),
     Variable(String),
+    UnaryOp {
+        op: UnaryOp,
+        operand: Box<Expr>,
+    },
     BinaryOp {
         left: Box<Expr>,
         op: BinaryOp,
@@ -27,11 +31,25 @@ pub enum Expr {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub enum UnaryOp {
+    Negate,
+    Not,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryOp {
     Add,
     Sub,
     Mul,
     Div,
+    Equal,
+    NotEqual,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone)]
@@ -41,13 +59,29 @@ pub enum Stmt {
         name: String,
         value: Expr,
     },
+    Block {
+        statements: Vec<Stmt>,
+    },
+    IfStatement {
+        condition: Expr,
+        then_branch: Vec<Stmt>,
+        else_branch: Option<Vec<Stmt>>,
+    },
+    WhileLoop {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
     ForLoop {
         variable: String,
         iterable: Expr,
         body: Vec<Stmt>,
     },
+    ReturnStatement {
+        value: Option<Expr>,
+    },
     FunctionDef {
         name: String,
+        params: Vec<String>,
         body: Vec<Stmt>,
     },
 }

@@ -1,0 +1,12 @@
+// if something is true we do one thing, else we do another thing!
+// this matters because programs need to make choices!
+
+score = 85
+
+if score >= 80
+    out("You passed with a good grade!")
+else
+    out("Keep studying!")
+
+if score == 85
+    out("Exact score match!")

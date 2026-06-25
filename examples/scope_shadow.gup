@@ -1,0 +1,11 @@
+// assignment inside a function can change an outer variable!
+// closures share the same box when they assign to a name that already exists!
+
+x = "outside"
+
+changeX()
+    x = "inside function"
+    out(x)
+
+changeX()
+out(x)
