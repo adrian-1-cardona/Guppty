@@ -53,17 +53,6 @@ impl Value {
         }
     }
 
-    /// turn a value into true/false for if and while checks
-    pub fn as_bool(&self) -> Result<bool, String> {
-        match self {
-            Value::GuppyBool(b) => Ok(*b),
-            other => Err(format!(
-                "Expected a boolean but got {}",
-                other.to_display_string()
-            )),
-        }
-    }
-
     /// is this value "truthy"? false and nothing are the only lies!
     /// this matters SO much because if/while use it to pick a path.
     pub fn is_truthy(&self) -> bool {
