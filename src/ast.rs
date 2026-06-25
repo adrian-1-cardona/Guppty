@@ -2,8 +2,22 @@
 // AST = abstract syntax tree = a family tree for your code!
 // it shows which parts belong together so the interpreter knows what to do.
 
+use crate::error::Span;
+
 #[derive(Debug, Clone)]
-pub enum Expr {
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+
+impl Expr {
+    pub fn new(kind: ExprKind, span: Span) -> Self {
+        Expr { kind, span }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ExprKind {
     StringLiteral(String),
     CharLiteral(char),
     NumberLiteral(i64),
@@ -53,7 +67,19 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Clone)]
-pub enum Stmt {
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Span,
+}
+
+impl Stmt {
+    pub fn new(kind: StmtKind, span: Span) -> Self {
+        Stmt { kind, span }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum StmtKind {
     ExpressionStatement(Expr),
     VariableDeclaration {
         name: String,

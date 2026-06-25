@@ -3,6 +3,8 @@
 // the lexer makes slices, the parser eats them in order.
 // each slice has a label so we know what it is.
 
+use crate::error::Span;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     // names and literal values (the actual data)
@@ -60,11 +62,15 @@ pub enum TokenKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub line: usize,
+    pub span: Span,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, line: usize) -> Self {
-        Token { kind, line }
+    pub fn new(kind: TokenKind, span: Span) -> Self {
+        Token { kind, span }
+    }
+
+    pub fn at(kind: TokenKind, line: usize, column: usize, length: usize) -> Self {
+        Token::new(kind, Span::new(line, column, length))
     }
 }

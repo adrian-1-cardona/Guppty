@@ -3,6 +3,7 @@
 // it also watches spaces at the start of lines to know when blocks begin and end.
 // blocks matter SO much because that is how scopes work!
 
+use crate::error::{GupError, Span};
 use crate::syntax::{keyword_token, SYNTAX};
 use crate::token::{Token, TokenKind};
 
@@ -22,11 +23,11 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
-fn push_token(tokens: &mut Vec<Token>, kind: TokenKind, line: usize) {
-    tokens.push(Token::new(kind, line));
+fn push_token(tokens: &mut Vec<Token>, kind: TokenKind, line: usize, column: usize, length: usize) {
+    tokens.push(Token::at(kind, line, column, length));
 }
 
-fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
+fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<Token>, GupError> {
     let mut tokens: Vec<Token> = Vec::new();
     let chars: Vec<char> = line.chars().collect();
     let mut pos = 0;
@@ -41,55 +42,79 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
         }
 
         if ch == '(' {
-            push_token(&mut tokens, TokenKind::LeftParen, line_number);
+            push_token(&mut tokens, TokenKind::LeftParen, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
 
         if ch == ')' {
-            push_token(&mut tokens, TokenKind::RightParen, line_number);
+            push_token(
+                &mut tokens,
+                TokenKind::RightParen,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == '[' {
-            push_token(&mut tokens, TokenKind::LeftBracket, line_number);
+            push_token(
+                &mut tokens,
+                TokenKind::LeftBracket,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == ']' {
-            push_token(&mut tokens, TokenKind::RightBracket, line_number);
+            push_token(
+                &mut tokens,
+                TokenKind::RightBracket,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == ';' {
-            push_token(&mut tokens, TokenKind::Semicolon, line_number);
+            push_token(
+                &mut tokens,
+                TokenKind::Semicolon,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == ',' {
-            push_token(&mut tokens, TokenKind::Comma, line_number);
+            push_token(&mut tokens, TokenKind::Comma, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
 
         if ch == '+' {
-            push_token(&mut tokens, TokenKind::Plus, line_number);
+            push_token(&mut tokens, TokenKind::Plus, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
 
         if ch == '*' {
-            push_token(&mut tokens, TokenKind::Star, line_number);
+            push_token(&mut tokens, TokenKind::Star, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
 
         if ch == '/' {
-            push_token(&mut tokens, TokenKind::Slash, line_number);
+            push_token(&mut tokens, TokenKind::Slash, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
@@ -97,10 +122,16 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
         // two-character operators like == and !=
         if ch == '=' {
             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
-                push_token(&mut tokens, TokenKind::EqualEqual, line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::EqualEqual,
+                    line_number,
+                    start_column + pos,
+                    2,
+                );
                 pos += 2;
             } else {
-                push_token(&mut tokens, TokenKind::Equal, line_number);
+                push_token(&mut tokens, TokenKind::Equal, line_number, start_column + pos, 1);
                 pos += 1;
             }
             continue;
@@ -108,23 +139,35 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
 
         if ch == '!' {
             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
-                push_token(&mut tokens, TokenKind::BangEqual, line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::BangEqual,
+                    line_number,
+                    start_column + pos,
+                    2,
+                );
                 pos += 2;
             } else {
-                panic!(
-                    "Line {}: I only know != as a pair! A lonely ! is confusing.",
-                    line_number
-                );
+                return Err(GupError::lex(
+                    Span::new(line_number, start_column + pos, 1),
+                    "I only know '!=' as a pair. A lonely '!' is not valid here.",
+                ));
             }
             continue;
         }
 
         if ch == '<' {
             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
-                push_token(&mut tokens, TokenKind::LessEqual, line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::LessEqual,
+                    line_number,
+                    start_column + pos,
+                    2,
+                );
                 pos += 2;
             } else {
-                push_token(&mut tokens, TokenKind::Less, line_number);
+                push_token(&mut tokens, TokenKind::Less, line_number, start_column + pos, 1);
                 pos += 1;
             }
             continue;
@@ -132,23 +175,36 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
 
         if ch == '>' {
             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
-                push_token(&mut tokens, TokenKind::GreaterEqual, line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::GreaterEqual,
+                    line_number,
+                    start_column + pos,
+                    2,
+                );
                 pos += 2;
             } else {
-                push_token(&mut tokens, TokenKind::Greater, line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::Greater,
+                    line_number,
+                    start_column + pos,
+                    1,
+                );
                 pos += 1;
             }
             continue;
         }
 
         if ch == '-' {
-            push_token(&mut tokens, TokenKind::Minus, line_number);
+            push_token(&mut tokens, TokenKind::Minus, line_number, start_column + pos, 1);
             pos += 1;
             continue;
         }
 
         // strings live inside "quotes"
         if ch == '"' {
+            let string_start = pos;
             pos += 1;
             let mut string_content = String::new();
 
@@ -158,10 +214,10 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
             }
 
             if pos >= chars.len() {
-                panic!(
-                    "Line {}: Oops! You started a string with \" but never closed it!",
-                    line_number
-                );
+                return Err(GupError::lex(
+                    Span::new(line_number, start_column + string_start, chars.len() - string_start),
+                    "You started a string with '\"' but never closed it.",
+                ));
             }
 
             pos += 1;
@@ -169,44 +225,57 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
                 &mut tokens,
                 TokenKind::StringLiteral(string_content),
                 line_number,
+                start_column + string_start,
+                pos - string_start,
             );
             continue;
         }
 
         // chars live inside 'quotes' and are exactly one letter
         if ch == '\'' {
+            let char_start = pos;
             pos += 1;
             if pos >= chars.len() {
-                panic!(
-                    "Line {}: Oops! You started a char with ' but never closed it!",
-                    line_number
-                );
+                return Err(GupError::lex(
+                    Span::new(line_number, start_column + char_start, 1),
+                    "You started a char with '\\'' but never closed it.",
+                ));
             }
 
             let char_value = chars[pos];
             pos += 1;
 
             if pos >= chars.len() || chars[pos] != '\'' {
-                panic!(
-                    "Line {}: A char must be exactly one character like 'h'",
-                    line_number
-                );
+                return Err(GupError::lex(
+                    Span::new(line_number, start_column + char_start, pos - char_start),
+                    "A char must be exactly one character, like 'h'.",
+                ));
             }
 
             pos += 1;
-            push_token(&mut tokens, TokenKind::CharLiteral(char_value), line_number);
+            push_token(
+                &mut tokens,
+                TokenKind::CharLiteral(char_value),
+                line_number,
+                start_column + char_start,
+                pos - char_start,
+            );
             continue;
         }
 
         // numbers can be whole or have a dot for decimals
         if ch.is_ascii_digit() {
+            let number_start = pos;
             let mut number_text = String::new();
             let mut is_float = false;
 
             while pos < chars.len() && (chars[pos].is_ascii_digit() || chars[pos] == '.') {
                 if chars[pos] == '.' {
                     if is_float {
-                        panic!("Line {}: Invalid number: too many decimal points", line_number);
+                        return Err(GupError::lex(
+                            Span::new(line_number, start_column + pos, 1),
+                            "This number has too many decimal points.",
+                        ));
                     }
                     is_float = true;
                 }
@@ -215,21 +284,40 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
             }
 
             if is_float {
-                let value: f64 = number_text.parse().unwrap_or_else(|_| {
-                    panic!("Line {}: Invalid float number: {}", line_number, number_text)
-                });
-                push_token(&mut tokens, TokenKind::FloatLiteral(value), line_number);
+                let value: f64 = number_text.parse().map_err(|_| {
+                    GupError::lex(
+                        Span::new(line_number, start_column + number_start, pos - number_start),
+                        format!("'{}' is not a valid decimal number.", number_text),
+                    )
+                })?;
+                push_token(
+                    &mut tokens,
+                    TokenKind::FloatLiteral(value),
+                    line_number,
+                    start_column + number_start,
+                    pos - number_start,
+                );
             } else {
-                let value: i64 = number_text.parse().unwrap_or_else(|_| {
-                    panic!("Line {}: Invalid number: {}", line_number, number_text)
-                });
-                push_token(&mut tokens, TokenKind::NumberLiteral(value), line_number);
+                let value: i64 = number_text.parse().map_err(|_| {
+                    GupError::lex(
+                        Span::new(line_number, start_column + number_start, pos - number_start),
+                        format!("'{}' is not a valid whole number.", number_text),
+                    )
+                })?;
+                push_token(
+                    &mut tokens,
+                    TokenKind::NumberLiteral(value),
+                    line_number,
+                    start_column + number_start,
+                    pos - number_start,
+                );
             }
             continue;
         }
 
         // words can be keywords or variable names
         if ch.is_alphabetic() || ch == '_' {
+            let word_start = pos;
             let mut word = String::new();
 
             while pos < chars.len() && (chars[pos].is_alphanumeric() || chars[pos] == '_') {
@@ -238,20 +326,32 @@ fn lex_line(line: &str, line_number: usize) -> Vec<Token> {
             }
 
             if let Some(keyword) = keyword_token(&word) {
-                push_token(&mut tokens, keyword, line_number);
+                push_token(
+                    &mut tokens,
+                    keyword,
+                    line_number,
+                    start_column + word_start,
+                    pos - word_start,
+                );
             } else {
-                push_token(&mut tokens, TokenKind::Identifier(word), line_number);
+                push_token(
+                    &mut tokens,
+                    TokenKind::Identifier(word),
+                    line_number,
+                    start_column + word_start,
+                    pos - word_start,
+                );
             }
             continue;
         }
 
-        panic!(
-            "Line {}: Yikes! I don't know what this character is: '{}'",
-            line_number, ch
-        );
+        return Err(GupError::lex(
+            Span::new(line_number, start_column + pos, 1),
+            format!("I do not know what to do with '{}'.", ch),
+        ));
     }
 
-    tokens
+    Ok(tokens)
 }
 
 fn measure_indent(line: &str) -> usize {
@@ -259,7 +359,7 @@ fn measure_indent(line: &str) -> usize {
 }
 
 /// turn the whole source file into a token list with indent/dedent markers
-pub fn lex(source: &str) -> Vec<Token> {
+pub fn lex(source: &str) -> Result<Vec<Token>, GupError> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut indent_stack: Vec<usize> = vec![0];
     let mut line_number = 0;
@@ -278,27 +378,39 @@ pub fn lex(source: &str) -> Vec<Token> {
         // less indent means a block ended — pop dedent tokens
         while indent < *indent_stack.last().unwrap() {
             indent_stack.pop();
-            push_token(&mut tokens, TokenKind::Dedent, line_number);
+            push_token(&mut tokens, TokenKind::Dedent, line_number, indent + 1, 1);
         }
 
         // more indent means a new block started — push indent token
         if indent > *indent_stack.last().unwrap() {
             indent_stack.push(indent);
-            push_token(&mut tokens, TokenKind::Indent, line_number);
+            push_token(&mut tokens, TokenKind::Indent, line_number, indent + 1, 1);
         }
 
-        tokens.extend(lex_line(trimmed, line_number));
-        push_token(&mut tokens, TokenKind::Newline, line_number);
+        tokens.extend(lex_line(trimmed, line_number, indent + 1)?);
+        push_token(
+            &mut tokens,
+            TokenKind::Newline,
+            line_number,
+            raw_line.chars().count() + 1,
+            1,
+        );
     }
 
     // close any blocks still open at the end of the file
     while indent_stack.len() > 1 {
         indent_stack.pop();
-        push_token(&mut tokens, TokenKind::Dedent, line_number);
+        push_token(
+            &mut tokens,
+            TokenKind::Dedent,
+            line_number.max(1),
+            1,
+            1,
+        );
     }
 
-    push_token(&mut tokens, TokenKind::EOF, line_number);
-    tokens
+    push_token(&mut tokens, TokenKind::EOF, line_number.max(1), 1, 1);
+    Ok(tokens)
 }
 
 // tiny helper so parser can ask "is this the print function name?"
