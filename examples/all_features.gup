@@ -1,0 +1,21 @@
+// A tour of Guppy features in one program
+
+math()
+    x = 5;
+    y = 6;
+    out(x + y);
+
+main()
+    math();
+
+x = 5;
+bool = true;
+f = 1.25;
+out(x);
+out(bool);
+out(f);
+
+for i in range(1 through 3)
+    out(i);
+
+main();

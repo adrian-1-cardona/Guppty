@@ -1,0 +1,12 @@
+x = 5;
+y = 6;
+out(x + y);
+
+a = 10;
+b = 3;
+out(a - b);
+out(a * b);
+out(a / b);
+
+pi = 3.14;
+out(pi + 1.0);

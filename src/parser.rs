@@ -1,34 +1,20 @@
 // === parser.rs ===
-// The parser is like a detective that looks at our tokens
-// and figures out what they MEAN together.
-//
-// The lexer gave us: [Identifier("out"), LeftParen, StringLiteral("Hello World!"), RightParen]
-// The parser says: "Aha! That's a function call named 'out' with one argument!"
-//
-// It builds the AST (our family tree of code) from the flat list of tokens.
-// Think of it like putting together a puzzle — the pieces (tokens) go in,
-// and a nice picture (the AST) comes out.
+// The parser figures out what tokens MEAN together and builds the AST.
 
+use crate::ast::{BinaryOp, Expr, Program, Stmt};
 use crate::token::Token;
-use crate::ast::{Expr, Stmt, Program};
 
-/// The Parser struct keeps track of where we are in the token list.
-/// It's like a bookmark — it remembers which token we're looking at right now.
 struct Parser {
-    tokens: Vec<Token>,  // All our tokens (the flat list of pieces)
-    pos: usize,          // Our current position (which token are we on?)
+    tokens: Vec<Token>,
+    pos: usize,
 }
 
 impl Parser {
-    /// Create a brand new parser with a list of tokens
     fn new(tokens: Vec<Token>) -> Self {
         Parser { tokens, pos: 0 }
     }
 
-    /// Peek at the current token WITHOUT moving forward.
-    /// Like looking at the next card in a deck without picking it up.
     fn current(&self) -> &Token {
-        // If we're past the end, just return EOF (the "end" marker)
         if self.pos >= self.tokens.len() {
             &Token::EOF
         } else {
@@ -36,17 +22,21 @@ impl Parser {
         }
     }
 
-    /// Move forward to the next token and give back the one we just passed.
-    /// Like picking up a card from the deck.
+    fn peek(&self, offset: usize) -> &Token {
+        let index = self.pos + offset;
+        if index >= self.tokens.len() {
+            &Token::EOF
+        } else {
+            &self.tokens[index]
+        }
+    }
+
     fn advance(&mut self) -> Token {
         let token = self.tokens[self.pos].clone();
         self.pos += 1;
         token
     }
 
-    /// Check if the current token matches what we expect, and if so, move past it.
-    /// If it DOESN'T match, panic! (something went wrong in the code).
-    /// This is like saying "I expect a ')' here — if it's not there, the code is broken."
     fn expect(&mut self, expected: &Token) {
         let current = self.current().clone();
         if &current == expected {
@@ -59,93 +49,271 @@ impl Parser {
         }
     }
 
-    /// Parse the entire program — this is the main entry point.
-    /// It reads statements one by one until we hit the end of the file.
+    fn skip_newlines(&mut self) {
+        while *self.current() == Token::Newline {
+            self.advance();
+        }
+    }
+
     fn parse_program(&mut self) -> Program {
         let mut statements: Vec<Stmt> = Vec::new();
 
-        // Keep reading statements until we reach the end of the file
+        self.skip_newlines();
         while *self.current() != Token::EOF {
             let stmt = self.parse_statement();
             statements.push(stmt);
+            self.skip_newlines();
         }
 
         statements
     }
 
-    /// Parse one single statement.
-    /// Right now, Guppty only has "expression statements" —
-    /// that means you write an expression (like a function call) and that's your statement.
-    fn parse_statement(&mut self) -> Stmt {
-        // Parse the expression part (like `out("Hello World!")`)
-        let expr = self.parse_expression();
+    fn parse_block(&mut self) -> Vec<Stmt> {
+        self.expect(&Token::Indent);
+        let mut statements: Vec<Stmt> = Vec::new();
 
-        // If there's a semicolon after it, eat it up (it's optional in Guppty!)
-        if *self.current() == Token::Semicolon {
-            self.advance(); // Skip the semicolon
+        self.skip_newlines();
+        while *self.current() != Token::Dedent && *self.current() != Token::EOF {
+            statements.push(self.parse_statement());
+            self.skip_newlines();
         }
 
-        // Wrap the expression in a statement and return it
+        if *self.current() == Token::Dedent {
+            self.advance();
+        }
+
+        statements
+    }
+
+    fn parse_statement(&mut self) -> Stmt {
+        // for i in range(1 through 6)
+        if *self.current() == Token::For {
+            return self.parse_for_loop();
+        }
+
+        // name = value;
+        if let Token::Identifier(name) = self.current().clone() {
+            if *self.peek(1) == Token::Equal {
+                return self.parse_variable_declaration(name);
+            }
+
+            // name() followed by indented block => function definition
+            if *self.peek(1) == Token::LeftParen
+                && *self.peek(2) == Token::RightParen
+                && (*self.peek(3) == Token::Newline || *self.peek(3) == Token::Indent)
+            {
+                let next = self.peek(4);
+                if *self.peek(3) == Token::Indent || *next == Token::Indent {
+                    return self.parse_function_def(name);
+                }
+            }
+        }
+
+        let expr = self.parse_expression();
+        self.consume_optional_semicolon();
         Stmt::ExpressionStatement(expr)
     }
 
-    /// Parse an expression.
-    /// An expression is something that produces a value.
-    /// Right now we handle:
-    ///   - String literals: "Hello World!"
-    ///   - Function calls: out("Hello World!")
-    ///   - Just a plain name: someVariable
+    fn parse_function_def(&mut self, name: String) -> Stmt {
+        self.advance(); // identifier already known
+        self.expect(&Token::LeftParen);
+        self.expect(&Token::RightParen);
+        self.skip_newlines();
+
+        let body = if *self.current() == Token::Indent {
+            self.parse_block()
+        } else {
+            Vec::new()
+        };
+
+        Stmt::FunctionDef { name, body }
+    }
+
+    fn parse_for_loop(&mut self) -> Stmt {
+        self.expect(&Token::For);
+
+        let variable = match self.advance() {
+            Token::Identifier(name) => name,
+            other => panic!("Expected a loop variable name, found {:?}", other),
+        };
+
+        self.expect(&Token::In);
+        let iterable = self.parse_expression();
+        self.skip_newlines();
+
+        let body = if *self.current() == Token::Indent {
+            self.parse_block()
+        } else {
+            Vec::new()
+        };
+
+        Stmt::ForLoop {
+            variable,
+            iterable,
+            body,
+        }
+    }
+
+    fn parse_variable_declaration(&mut self, name: String) -> Stmt {
+        self.advance(); // identifier
+        self.expect(&Token::Equal);
+        let value = self.parse_expression();
+        self.consume_optional_semicolon();
+
+        Stmt::VariableDeclaration { name, value }
+    }
+
+    fn consume_optional_semicolon(&mut self) {
+        if *self.current() == Token::Semicolon {
+            self.advance();
+        }
+        if *self.current() == Token::Newline {
+            self.advance();
+        }
+    }
+
     fn parse_expression(&mut self) -> Expr {
+        self.parse_additive()
+    }
+
+    fn parse_additive(&mut self) -> Expr {
+        let mut expr = self.parse_multiplicative();
+
+        loop {
+            match self.current() {
+                Token::Plus => {
+                    self.advance();
+                    let right = self.parse_multiplicative();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Add,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Minus => {
+                    self.advance();
+                    let right = self.parse_multiplicative();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Sub,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        expr
+    }
+
+    fn parse_multiplicative(&mut self) -> Expr {
+        let mut expr = self.parse_primary();
+
+        loop {
+            match self.current() {
+                Token::Star => {
+                    self.advance();
+                    let right = self.parse_primary();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Mul,
+                        right: Box::new(right),
+                    };
+                }
+                Token::Slash => {
+                    self.advance();
+                    let right = self.parse_primary();
+                    expr = Expr::BinaryOp {
+                        left: Box::new(expr),
+                        op: BinaryOp::Div,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        expr
+    }
+
+    fn parse_primary(&mut self) -> Expr {
         match self.current().clone() {
-            // If we see a string in quotes, it's a string literal
             Token::StringLiteral(s) => {
-                self.advance(); // Move past the string token
+                self.advance();
                 Expr::StringLiteral(s)
             }
-
-            // If we see a name (identifier), it might be a function call
-            Token::Identifier(name) => {
-                self.advance(); // Move past the name
-
-                // Check if there's a "(" right after — that means it's a function call!
-                if *self.current() == Token::LeftParen {
-                    self.advance(); // Eat the "("
-
-                    // Collect all the arguments (stuff inside the parentheses)
-                    let mut args: Vec<Expr> = Vec::new();
-
-                    // Keep reading arguments until we see ")"
-                    while *self.current() != Token::RightParen {
-                        let arg = self.parse_expression();
-                        args.push(arg);
-
-                        // If there's a comma, skip it (for multiple arguments later)
-                        // For now, out("Hello") only has one argument, so this is future-proofing
-                    }
-
-                    // We expect a ")" to close the function call
-                    self.expect(&Token::RightParen);
-
-                    // Build and return the function call expression
-                    Expr::FunctionCall { name, args }
+            Token::CharLiteral(ch) => {
+                self.advance();
+                Expr::CharLiteral(ch)
+            }
+            Token::NumberLiteral(n) => {
+                self.advance();
+                Expr::NumberLiteral(n)
+            }
+            Token::FloatLiteral(f) => {
+                self.advance();
+                Expr::FloatLiteral(f)
+            }
+            Token::True => {
+                self.advance();
+                Expr::BoolLiteral(true)
+            }
+            Token::False => {
+                self.advance();
+                Expr::BoolLiteral(false)
+            }
+            Token::LeftBracket => {
+                self.advance();
+                if *self.current() == Token::RightBracket {
+                    self.advance();
+                    Expr::ArrayLiteral(Vec::new())
                 } else {
-                    // If there's no "(", it's just a plain name for now
-                    // We'll treat it as a function call with no args for simplicity
-                    // (This won't happen with our current hello.gup but it's safe)
-                    panic!("I found the name '{}' but I don't know what to do with it yet! Try calling it like: {}(\"something\")", name, name);
+                    panic!("Only empty arrays [] are supported right now");
                 }
             }
-
-            // If we see anything else, we don't know how to handle it
-            other => {
-                panic!("I don't understand this token: {:?}", other);
+            Token::Range => {
+                self.advance();
+                self.parse_range_expr()
             }
+            Token::Identifier(name) => {
+                self.advance();
+
+                if *self.current() == Token::LeftParen {
+                    self.advance();
+                    let mut args: Vec<Expr> = Vec::new();
+
+                    while *self.current() != Token::RightParen {
+                        args.push(self.parse_expression());
+                        if *self.current() == Token::Comma {
+                            self.advance();
+                        }
+                    }
+
+                    self.expect(&Token::RightParen);
+                    Expr::FunctionCall { name, args }
+                } else {
+                    Expr::Variable(name)
+                }
+            }
+            other => panic!("I don't understand this token in an expression: {:?}", other),
+        }
+    }
+
+    fn parse_range_expr(&mut self) -> Expr {
+        self.expect(&Token::LeftParen);
+
+        let start = self.parse_expression();
+        self.expect(&Token::Through);
+        let end = self.parse_expression();
+        self.expect(&Token::RightParen);
+
+        Expr::Range {
+            start: Box::new(start),
+            end: Box::new(end),
         }
     }
 }
 
-/// The main function that the rest of the program calls.
-/// Give it tokens, get back a program (list of statements).
 pub fn parse(tokens: Vec<Token>) -> Program {
     let mut parser = Parser::new(tokens);
     parser.parse_program()

@@ -1,128 +1,239 @@
 // === lexer.rs ===
-// The lexer is like a cookie cutter for code.
-// It takes the raw text you wrote (like "out("Hello World!")")
-// and cuts it into neat little token pieces.
-//
-// It reads one character at a time, figures out what kind of
-// token it's looking at, and puts it in a list.
-//
-// Imagine reading a sentence letter by letter and grouping
-// the letters into words — that's basically what this does!
+// The lexer cuts source code into neat little token pieces.
 
 use crate::token::Token;
 
-/// This function takes your entire source code as a string
-/// and gives back a list of tokens (our LEGO pieces).
-pub fn lex(source: &str) -> Vec<Token> {
-    // This is our collection bag — we'll put each token in here
+/// Strip inline comments starting with //
+fn strip_comment(line: &str) -> &str {
+    let mut in_string = false;
+    let chars: Vec<char> = line.chars().collect();
+
+    for i in 0..chars.len() {
+        if chars[i] == '"' {
+            in_string = !in_string;
+        } else if !in_string && chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
+            return &line[..i];
+        }
+    }
+
+    line
+}
+
+fn keyword_or_identifier(word: &str) -> Token {
+    match word {
+        "for" => Token::For,
+        "in" => Token::In,
+        "range" => Token::Range,
+        "through" => Token::Through,
+        "true" => Token::True,
+        "false" => Token::False,
+        _ => Token::Identifier(word.to_string()),
+    }
+}
+
+fn lex_line(line: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
-
-    // Turn the source code into a list of characters so we can
-    // look at them one by one (like laying out letter tiles)
-    let chars: Vec<char> = source.chars().collect();
-
-    // This is our finger pointing at the current character.
-    // We start at the very beginning (position 0).
+    let chars: Vec<char> = line.chars().collect();
     let mut pos = 0;
 
-    // Keep going until we've looked at every single character
     while pos < chars.len() {
-        // Grab the character our finger is pointing at right now
         let ch = chars[pos];
 
-        // --- SKIP WHITESPACE ---
-        // Spaces, tabs, and newlines don't mean anything to us.
-        // Just skip over them like stepping over puddles.
         if ch.is_whitespace() {
             pos += 1;
-            continue; // Go back to the top of the loop
+            continue;
         }
 
-        // --- LEFT PARENTHESIS ---
-        // If we see "(", that's a LeftParen token
         if ch == '(' {
             tokens.push(Token::LeftParen);
             pos += 1;
             continue;
         }
 
-        // --- RIGHT PARENTHESIS ---
-        // If we see ")", that's a RightParen token
         if ch == ')' {
             tokens.push(Token::RightParen);
             pos += 1;
             continue;
         }
 
-        // --- SEMICOLON ---
-        // If we see ";", that's a Semicolon token
+        if ch == '[' {
+            tokens.push(Token::LeftBracket);
+            pos += 1;
+            continue;
+        }
+
+        if ch == ']' {
+            tokens.push(Token::RightBracket);
+            pos += 1;
+            continue;
+        }
+
         if ch == ';' {
             tokens.push(Token::Semicolon);
             pos += 1;
             continue;
         }
 
-        // --- STRING LITERAL ---
-        // If we see a double quote, that means a string is starting!
-        // We need to collect everything until the closing quote.
-        if ch == '"' {
-            // Move past the opening quote
+        if ch == ',' {
+            tokens.push(Token::Comma);
             pos += 1;
+            continue;
+        }
 
-            // This will hold all the letters inside the quotes
+        if ch == '+' {
+            tokens.push(Token::Plus);
+            pos += 1;
+            continue;
+        }
+
+        if ch == '-' {
+            tokens.push(Token::Minus);
+            pos += 1;
+            continue;
+        }
+
+        if ch == '*' {
+            tokens.push(Token::Star);
+            pos += 1;
+            continue;
+        }
+
+        if ch == '/' {
+            tokens.push(Token::Slash);
+            pos += 1;
+            continue;
+        }
+
+        if ch == '=' {
+            tokens.push(Token::Equal);
+            pos += 1;
+            continue;
+        }
+
+        if ch == '"' {
+            pos += 1;
             let mut string_content = String::new();
 
-            // Keep reading characters until we find the closing quote
-            // or run out of characters (which would be an error)
             while pos < chars.len() && chars[pos] != '"' {
                 string_content.push(chars[pos]);
                 pos += 1;
             }
 
-            // If we ran out of characters without finding a closing quote,
-            // that means the programmer forgot to close their string!
             if pos >= chars.len() {
                 panic!("Oops! You started a string with \" but never closed it!");
             }
 
-            // Move past the closing quote
             pos += 1;
-
-            // Save this string as a token
             tokens.push(Token::StringLiteral(string_content));
             continue;
         }
 
-        // --- IDENTIFIER (a name/word) ---
-        // If we see a letter or underscore, it's the start of a word.
-        // Words can have letters, numbers, and underscores in them.
+        if ch == '\'' {
+            pos += 1;
+            if pos >= chars.len() {
+                panic!("Oops! You started a char with ' but never closed it!");
+            }
+
+            let char_value = chars[pos];
+            pos += 1;
+
+            if pos >= chars.len() || chars[pos] != '\'' {
+                panic!("Oops! A char literal must be exactly one character like 'h'");
+            }
+
+            pos += 1;
+            tokens.push(Token::CharLiteral(char_value));
+            continue;
+        }
+
+        if ch.is_ascii_digit() {
+            let mut number_text = String::new();
+            let mut is_float = false;
+
+            while pos < chars.len() && (chars[pos].is_ascii_digit() || chars[pos] == '.') {
+                if chars[pos] == '.' {
+                    if is_float {
+                        panic!("Invalid number: too many decimal points");
+                    }
+                    is_float = true;
+                }
+                number_text.push(chars[pos]);
+                pos += 1;
+            }
+
+            if is_float {
+                let value: f64 = number_text
+                    .parse()
+                    .unwrap_or_else(|_| panic!("Invalid float number: {}", number_text));
+                tokens.push(Token::FloatLiteral(value));
+            } else {
+                let value: i64 = number_text
+                    .parse()
+                    .unwrap_or_else(|_| panic!("Invalid number: {}", number_text));
+                tokens.push(Token::NumberLiteral(value));
+            }
+            continue;
+        }
+
         if ch.is_alphabetic() || ch == '_' {
-            // Start collecting the letters of this word
             let mut word = String::new();
 
-            // Keep going as long as we see letters, numbers, or underscores
             while pos < chars.len() && (chars[pos].is_alphanumeric() || chars[pos] == '_') {
                 word.push(chars[pos]);
                 pos += 1;
             }
 
-            // Save this word as an Identifier token
-            tokens.push(Token::Identifier(word));
+            tokens.push(keyword_or_identifier(&word));
             continue;
         }
 
-        // --- UNKNOWN CHARACTER ---
-        // If we get here, we found something we don't understand!
-        // Let the programmer know something is wrong.
         panic!(
             "Yikes! I don't know what this character is: '{}' (found at position {})",
             ch, pos
         );
     }
 
-    // Add the special "end of file" token so the parser knows we're done
-    tokens.push(Token::EOF);
+    tokens
+}
 
-    // Give back our nice list of tokens!
+fn measure_indent(line: &str) -> usize {
+    line.chars().take_while(|c| *c == ' ' || *c == '\t').count()
+}
+
+/// Lex the entire source and emit indentation-aware tokens.
+pub fn lex(source: &str) -> Vec<Token> {
+    let mut tokens: Vec<Token> = Vec::new();
+    let mut indent_stack: Vec<usize> = vec![0];
+
+    for raw_line in source.lines() {
+        let line = strip_comment(raw_line);
+        let trimmed = line.trim();
+
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let indent = measure_indent(line);
+
+        while indent < *indent_stack.last().unwrap() {
+            indent_stack.pop();
+            tokens.push(Token::Dedent);
+        }
+
+        if indent > *indent_stack.last().unwrap() {
+            indent_stack.push(indent);
+            tokens.push(Token::Indent);
+        }
+
+        tokens.extend(lex_line(trimmed));
+        tokens.push(Token::Newline);
+    }
+
+    while indent_stack.len() > 1 {
+        indent_stack.pop();
+        tokens.push(Token::Dedent);
+    }
+
+    tokens.push(Token::EOF);
     tokens
 }

@@ -1,0 +1,12 @@
+x = 5;
+[];
+bool = true;
+y = 'h';
+z = "hello";
+f = 1.25;
+
+out(x);
+out(bool);
+out(y);
+out(z);
+out(f);

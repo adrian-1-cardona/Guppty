@@ -1,22 +1,59 @@
 // === value.rs ===
 // Values are the actual "things" that exist when your program is running.
-//
-// Think of it like this:
-//   - In your code you WRITE: "Hello World!"
-//   - When the program RUNS, that becomes an actual Value — a piece of text
-//     sitting in the computer's memory.
-//
-// Right now Guppty only has one type of value: text (we call it a String).
-// Later you could add numbers, true/false, lists, etc.!
 
-/// These are all the types of values that can exist while a Guppty program runs.
-/// It's like asking "what kinds of things can Guppty hold in its hands?"
 #[derive(Debug, Clone)]
 pub enum Value {
-    // A piece of text, like "Hello World!"
     GuppyString(String),
-
-    // "Nothing" — when something doesn't give back a value.
-    // Like when out("hi") prints "hi" — it doesn't really RETURN anything useful.
+    GuppyChar(char),
+    GuppyNumber(i64),
+    GuppyFloat(f64),
+    GuppyBool(bool),
+    GuppyArray(Vec<Value>),
     Nothing,
+}
+
+impl Value {
+    pub fn to_display_string(&self) -> String {
+        match self {
+            Value::GuppyString(text) => text.clone(),
+            Value::GuppyChar(ch) => ch.to_string(),
+            Value::GuppyNumber(n) => n.to_string(),
+            Value::GuppyFloat(f) => {
+                let rounded = (f * 100.0).round() / 100.0;
+                if rounded.fract() == 0.0 {
+                    format!("{:.1}", rounded)
+                } else {
+                    rounded.to_string()
+                }
+            }
+            Value::GuppyBool(b) => b.to_string(),
+            Value::GuppyArray(items) => {
+                let parts: Vec<String> = items.iter().map(|v| v.to_display_string()).collect();
+                format!("[{}]", parts.join(", "))
+            }
+            Value::Nothing => String::new(),
+        }
+    }
+
+    pub fn as_number(&self) -> Result<f64, String> {
+        match self {
+            Value::GuppyNumber(n) => Ok(*n as f64),
+            Value::GuppyFloat(f) => Ok(*f),
+            other => Err(format!(
+                "Expected a number but got {}",
+                other.to_display_string()
+            )),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn as_bool(&self) -> Result<bool, String> {
+        match self {
+            Value::GuppyBool(b) => Ok(*b),
+            other => Err(format!(
+                "Expected a boolean but got {}",
+                other.to_display_string()
+            )),
+        }
+    }
 }
