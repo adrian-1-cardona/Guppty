@@ -1,0 +1,11 @@
+// variables inside a block stay inside — they do not leak out!
+// scope keeps your boxes separate so names do not bump into each other!
+
+if true
+    insideBlock = 42
+    out(insideBlock)
+
+out("outside still works")
+
+outer = "I am global"
+out(outer)

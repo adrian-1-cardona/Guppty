@@ -1,0 +1,12 @@
+// countdown with for loop AND while loop in one program!
+// two ways to repeat stuff — both are useful!
+
+out("for loop:")
+for i in range(1 through 3)
+    out(i)
+
+out("while loop:")
+w = 1
+while w <= 3
+    out(w)
+    w = w + 1

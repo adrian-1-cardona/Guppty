@@ -1,0 +1,11 @@
+// while can add up numbers — like a tiny calculator loop!
+// we keep a running total and add each number from 1 to 5!
+
+total = 0
+n = 1
+
+while n <= 5
+    total = total + n
+    n = n + 1
+
+out(total)

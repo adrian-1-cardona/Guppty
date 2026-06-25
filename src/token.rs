@@ -1,11 +1,11 @@
 // === token.rs ===
-// Think of tokens like LEGO pieces.
-// Before we can build anything, we need to break our code
-// into small labeled pieces. Each piece is a "token."
+// tokens are tiny pieces of your code, like cutting a pizza into slices!
+// the lexer makes slices, the parser eats them in order.
+// each slice has a label so we know what it is.
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    // Literals
+pub enum TokenKind {
+    // names and literal values (the actual data)
     Identifier(String),
     StringLiteral(String),
     CharLiteral(char),
@@ -14,20 +14,33 @@ pub enum Token {
     True,
     False,
 
-    // Keywords
+    // special words that mean something (keywords)
     For,
     In,
     Range,
     Through,
+    If,
+    Else,
+    While,
+    Return,
+    And,
+    Or,
+    Not,
 
-    // Operators
+    // math and logic symbols
     Plus,
     Minus,
     Star,
     Slash,
     Equal,
+    EqualEqual,
+    BangEqual,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
 
-    // Punctuation
+    // punctuation (the shapes that group things)
     LeftParen,
     RightParen,
     LeftBracket,
@@ -35,10 +48,40 @@ pub enum Token {
     Semicolon,
     Comma,
 
-    // Structure
+    // indentation blocks (python-style — super important for scopes!)
     Newline,
     Indent,
     Dedent,
 
     EOF,
+}
+
+/// a token is a labeled slice sitting at a place in the file.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub line: usize,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, line: usize) -> Self {
+        Token { kind, line }
+    }
+
+    pub fn eof() -> Self {
+        Token::new(TokenKind::EOF, 0)
+    }
+}
+
+impl TokenKind {
+    pub fn is_statement_start(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::For
+                | TokenKind::If
+                | TokenKind::While
+                | TokenKind::Return
+                | TokenKind::Identifier(_)
+        )
+    }
 }

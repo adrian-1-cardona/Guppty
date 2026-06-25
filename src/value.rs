@@ -1,5 +1,8 @@
 // === value.rs ===
-// Values are the actual "things" that exist when your program is running.
+// values are the things that actually exist when your program runs!
+// numbers, words, true/false, and even functions are all values.
+
+use crate::environment::GuppyFunction;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -9,10 +12,12 @@ pub enum Value {
     GuppyFloat(f64),
     GuppyBool(bool),
     GuppyArray(Vec<Value>),
+    GuppyFunction(GuppyFunction),
     Nothing,
 }
 
 impl Value {
+    /// how we print a value to the screen with out()
     pub fn to_display_string(&self) -> String {
         match self {
             Value::GuppyString(text) => text.clone(),
@@ -31,10 +36,12 @@ impl Value {
                 let parts: Vec<String> = items.iter().map(|v| v.to_display_string()).collect();
                 format!("[{}]", parts.join(", "))
             }
+            Value::GuppyFunction(_) => "<function>".to_string(),
             Value::Nothing => String::new(),
         }
     }
 
+    /// turn a value into a number for math — only numbers count!
     pub fn as_number(&self) -> Result<f64, String> {
         match self {
             Value::GuppyNumber(n) => Ok(*n as f64),
@@ -46,7 +53,7 @@ impl Value {
         }
     }
 
-    #[allow(dead_code)]
+    /// turn a value into true/false for if and while checks
     pub fn as_bool(&self) -> Result<bool, String> {
         match self {
             Value::GuppyBool(b) => Ok(*b),
@@ -54,6 +61,16 @@ impl Value {
                 "Expected a boolean but got {}",
                 other.to_display_string()
             )),
+        }
+    }
+
+    /// is this value "truthy"? false and nothing are the only lies!
+    /// this matters SO much because if/while use it to pick a path.
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::GuppyBool(false) => false,
+            Value::Nothing => false,
+            _ => true,
         }
     }
 }
