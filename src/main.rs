@@ -12,18 +12,19 @@
 // That's it! The main.rs just connects everything together.
 
 // --- These lines tell Rust "hey, I have code in these other files, use them!" ---
-mod token;        // our LEGO piece types (what kinds of tokens exist)
-mod syntax;       // the menu of special words — change syntax in ONE place!
-mod lexer;        // the cookie cutter (breaks code into tokens)
-mod ast;          // the family tree structure (how code pieces relate)
-mod parser;       // the detective (figures out what tokens mean together)
-mod environment;  // the boxes that hold variables (scopes!)
-mod value;        // the runtime values (actual data when program runs)
-mod interpreter;  // the actor (reads the script and performs it)
+mod ast; // the family tree structure (how code pieces relate)
+mod environment; // the boxes that hold variables (scopes!)
+mod error; // nice error messages with line/column/span
+mod interpreter;
+mod lexer; // the cookie cutter (breaks code into tokens)
+mod parser; // the detective (figures out what tokens mean together)
+mod syntax; // the menu of special words — change syntax in ONE place!
+mod token; // our LEGO piece types (what kinds of tokens exist)
+mod value; // the runtime values (actual data when program runs) // the actor (reads the script and performs it)
 
 // --- We need these tools from Rust's standard library ---
-use std::env;    // Lets us read command-line arguments (like the filename)
-use std::fs;     // Lets us read files from disk
+use std::env; // Lets us read command-line arguments (like the filename)
+use std::fs; // Lets us read files from disk
 
 fn main() {
     // Step 1: Grab the command-line arguments
@@ -53,11 +54,20 @@ fn main() {
     // Step 5: THE PIPELINE — this is where the magic happens!
 
     // 5a: LEXER — chop the source code into tokens (LEGO pieces)
-    let tokens = lexer::lex(&source);
+    let tokens = lexer::lex(&source).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 
     // 5b: PARSER — arrange the tokens into a tree (figure out the structure)
-    let program = parser::parse(tokens);
+    let program = parser::parse(tokens).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 
     // 5c: INTERPRETER — walk the tree and actually DO what the code says!
-    interpreter::interpret(program);
+    interpreter::interpret(program).unwrap_or_else(|error| {
+        eprintln!("{}", error.render(filename, &source));
+        std::process::exit(1);
+    });
 }
