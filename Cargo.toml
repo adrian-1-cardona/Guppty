@@ -3,6 +3,7 @@ name = "guppty"
 version = "0.1.0"
 edition = "2021"
 description = "The Guppty programming language"
+license = "MIT"
 
 [[bin]]
 name = "guppty"
