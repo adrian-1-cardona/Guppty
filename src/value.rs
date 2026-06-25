@@ -2,18 +2,20 @@
 // values are the things that actually exist when your program runs!
 // numbers, words, true/false, and even functions are all values.
 
+use crate::bytecode::ClosureValue;
 use crate::environment::GuppyFunction;
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    GuppyString(String),
-    GuppyChar(char),
-    GuppyNumber(i64),
-    GuppyFloat(f64),
-    GuppyBool(bool),
-    GuppyArray(Vec<Value>),
-    GuppyFunction(GuppyFunction),
-    Nothing,
+  GuppyString(String),
+  GuppyChar(char),
+  GuppyNumber(i64),
+  GuppyFloat(f64),
+  GuppyBool(bool),
+  GuppyArray(Vec<Value>),
+  GuppyFunction(GuppyFunction),
+  GuppyClosure(ClosureValue),
+  Nothing,
 }
 
 impl Value {
@@ -37,6 +39,7 @@ impl Value {
                 format!("[{}]", parts.join(", "))
             }
             Value::GuppyFunction(_) => "<function>".to_string(),
+            Value::GuppyClosure(_) => "<function>".to_string(),
             Value::Nothing => String::new(),
         }
     }

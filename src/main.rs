@@ -6,68 +6,71 @@
 //   1. You knock (run the command)
 //   2. It opens the door (reads your .gup file)
 //   3. It sends your code through the pipeline:
-//        Source Code → Lexer → Parser → Interpreter
-//        (text)       (tokens) (tree)   (actually does stuff!)
+//        Source Code → Lexer → Parser → Compiler → VM → stdout
+//        (text)       (tokens) (tree)   (bytecode) (robot!)
 //
-// That's it! The main.rs just connects everything together.
+// Use --interp if you want the older tree-walking interpreter instead.
 
-// --- These lines tell Rust "hey, I have code in these other files, use them!" ---
-mod ast; // the family tree structure (how code pieces relate)
-mod environment; // the boxes that hold variables (scopes!)
-mod error; // nice error messages with line/column/span
+mod ast;
+mod bytecode;
+mod compiler;
+mod environment;
+mod error;
 mod interpreter;
-mod lexer; // the cookie cutter (breaks code into tokens)
-mod parser; // the detective (figures out what tokens mean together)
-mod syntax; // the menu of special words — change syntax in ONE place!
-mod token; // our LEGO piece types (what kinds of tokens exist)
-mod value; // the runtime values (actual data when program runs) // the actor (reads the script and performs it)
+mod lexer;
+mod parser;
+mod syntax;
+mod token;
+mod value;
+mod vm;
 
-// --- We need these tools from Rust's standard library ---
-use std::env; // Lets us read command-line arguments (like the filename)
-use std::fs; // Lets us read files from disk
+use std::env;
+use std::fs;
 
 fn main() {
-    // Step 1: Grab the command-line arguments
-    // When you type "guppty hello.gup", args will be:
-    //   args[0] = "guppty"      (the program name itself)
-    //   args[1] = "hello.gup"   (the file you want to run)
-    let args: Vec<String> = env::args().collect();
+  let args: Vec<String> = env::args().collect();
 
-    // Step 2: Make sure they actually gave us a file to run!
-    // If they just typed "guppty" with no file, tell them how to use it.
-    if args.len() < 2 {
-        eprintln!("Usage: guppty <file.gup>");
-        eprintln!("Example: guppty hello.gup");
-        std::process::exit(1);
-    }
+  if args.len() < 2 {
+    eprintln!("Usage: guppty <file.gup> [--interp]");
+    eprintln!("Example: guppty hello.gup");
+    std::process::exit(1);
+  }
 
-    // Step 3: Get the filename from the arguments
-    let filename = &args[1];
+  let use_interpreter = args.iter().any(|arg| arg == "--interp");
+  let filename = args
+    .iter()
+    .skip(1)
+    .find(|arg| !arg.starts_with("--"))
+    .expect("filename argument");
 
-    // Step 4: Read the file's contents into a string
-    // If the file doesn't exist or can't be read, show a helpful error
-    let source = fs::read_to_string(filename).unwrap_or_else(|e| {
-        eprintln!("Oops! I couldn't read the file '{}': {}", filename, e);
-        std::process::exit(1);
-    });
+  let source = fs::read_to_string(filename).unwrap_or_else(|e| {
+    eprintln!("Oops! I couldn't read the file '{}': {}", filename, e);
+    std::process::exit(1);
+  });
 
-    // Step 5: THE PIPELINE — this is where the magic happens!
+  let tokens = lexer::lex(&source).unwrap_or_else(|error| {
+    eprintln!("{}", error.render(filename, &source));
+    std::process::exit(1);
+  });
 
-    // 5a: LEXER — chop the source code into tokens (LEGO pieces)
-    let tokens = lexer::lex(&source).unwrap_or_else(|error| {
-        eprintln!("{}", error.render(filename, &source));
-        std::process::exit(1);
-    });
+  let program = parser::parse(tokens).unwrap_or_else(|error| {
+    eprintln!("{}", error.render(filename, &source));
+    std::process::exit(1);
+  });
 
-    // 5b: PARSER — arrange the tokens into a tree (figure out the structure)
-    let program = parser::parse(tokens).unwrap_or_else(|error| {
-        eprintln!("{}", error.render(filename, &source));
-        std::process::exit(1);
-    });
-
-    // 5c: INTERPRETER — walk the tree and actually DO what the code says!
+  if use_interpreter {
     interpreter::interpret(program).unwrap_or_else(|error| {
-        eprintln!("{}", error.render(filename, &source));
-        std::process::exit(1);
+      eprintln!("{}", error.render(filename, &source));
+      std::process::exit(1);
     });
+  } else {
+    let script = compiler::compile(&program).unwrap_or_else(|error| {
+      eprintln!("{}", error.render(filename, &source));
+      std::process::exit(1);
+    });
+    vm::run(script).unwrap_or_else(|error| {
+      eprintln!("{}", error.render(filename, &source));
+      std::process::exit(1);
+    });
+  }
 }
