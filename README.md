@@ -13,3 +13,10 @@ source "$HOME/.cargo/env"
 
 then: 
 guppty examples/hello.gup
+
+# Testing 
+always run: 
+cargo build 
+
+then 
+cargo run -- examples/programname.gup
