@@ -6,3 +6,10 @@ hello.gup → lexer → parser → interpreter → output
 
 ## Footmotes
 right now it's a rust interpreter , later will be compiled in C 
+
+## how to run 
+Run this in your terminal:
+source "$HOME/.cargo/env"
+
+then: 
+guppty examples/hello.gup
