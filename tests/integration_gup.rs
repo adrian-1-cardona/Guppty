@@ -49,7 +49,8 @@ fn all_gup_files_match_expected_stdout() {
         // compare stdout line by line — stdout out!
         let actual = stdout_lines(&stdout);
         assert_eq!(
-            actual, case.stdout,
+            actual,
+            case.stdout,
             "wrong output for {}\n--- expected ---\n{}\n--- actual ---\n{}",
             case.file,
             case.stdout.join("\n"),

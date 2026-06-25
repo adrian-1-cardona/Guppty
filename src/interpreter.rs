@@ -42,10 +42,7 @@ pub fn interpret(program: Program) -> Result<(), GupError> {
     Ok(())
 }
 
-fn execute_statement(
-    stmt: &Stmt,
-    env: Rc<RefCell<Environment>>,
-) -> Result<ExecResult, GupError> {
+fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecResult, GupError> {
     match &stmt.kind {
         StmtKind::ExpressionStatement(expr) => {
             evaluate_expression(expr, env)?;
@@ -263,7 +260,9 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
                 .map_err(|msg| GupError::runtime(expr.span, msg))?;
 
             match function {
-                Value::GuppyFunction(function) => call_function(function, evaluated_args, expr.span),
+                Value::GuppyFunction(function) => {
+                    call_function(function, evaluated_args, expr.span)
+                }
                 other => Err(GupError::runtime(
                     expr.span,
                     format!(

@@ -42,7 +42,13 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
         }
 
         if ch == '(' {
-            push_token(&mut tokens, TokenKind::LeftParen, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::LeftParen,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
@@ -96,25 +102,49 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
         }
 
         if ch == ',' {
-            push_token(&mut tokens, TokenKind::Comma, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::Comma,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == '+' {
-            push_token(&mut tokens, TokenKind::Plus, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::Plus,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == '*' {
-            push_token(&mut tokens, TokenKind::Star, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::Star,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
 
         if ch == '/' {
-            push_token(&mut tokens, TokenKind::Slash, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::Slash,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
@@ -131,7 +161,13 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
                 );
                 pos += 2;
             } else {
-                push_token(&mut tokens, TokenKind::Equal, line_number, start_column + pos, 1);
+                push_token(
+                    &mut tokens,
+                    TokenKind::Equal,
+                    line_number,
+                    start_column + pos,
+                    1,
+                );
                 pos += 1;
             }
             continue;
@@ -167,7 +203,13 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
                 );
                 pos += 2;
             } else {
-                push_token(&mut tokens, TokenKind::Less, line_number, start_column + pos, 1);
+                push_token(
+                    &mut tokens,
+                    TokenKind::Less,
+                    line_number,
+                    start_column + pos,
+                    1,
+                );
                 pos += 1;
             }
             continue;
@@ -197,7 +239,13 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
         }
 
         if ch == '-' {
-            push_token(&mut tokens, TokenKind::Minus, line_number, start_column + pos, 1);
+            push_token(
+                &mut tokens,
+                TokenKind::Minus,
+                line_number,
+                start_column + pos,
+                1,
+            );
             pos += 1;
             continue;
         }
@@ -215,7 +263,11 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
 
             if pos >= chars.len() {
                 return Err(GupError::lex(
-                    Span::new(line_number, start_column + string_start, chars.len() - string_start),
+                    Span::new(
+                        line_number,
+                        start_column + string_start,
+                        chars.len() - string_start,
+                    ),
                     "You started a string with '\"' but never closed it.",
                 ));
             }
@@ -400,13 +452,7 @@ pub fn lex(source: &str) -> Result<Vec<Token>, GupError> {
     // close any blocks still open at the end of the file
     while indent_stack.len() > 1 {
         indent_stack.pop();
-        push_token(
-            &mut tokens,
-            TokenKind::Dedent,
-            line_number.max(1),
-            1,
-            1,
-        );
+        push_token(&mut tokens, TokenKind::Dedent, line_number.max(1), 1, 1);
     }
 
     push_token(&mut tokens, TokenKind::EOF, line_number.max(1), 1, 1);
@@ -461,7 +507,7 @@ mod tests {
     #[test]
     fn lex_simple_out_call() {
         // step 1: give the lexer a tiny program
-        let tokens = lex(r#"out("hi")"#);
+        let tokens = lex(r#"out("hi")"#).unwrap();
 
         // step 2: throw away newline/indent junk we don't care about here
         let important = without_structure(&tokens);
@@ -484,7 +530,7 @@ mod tests {
     // -------------------------------------------------------------------------
     #[test]
     fn strips_inline_comments() {
-        let tokens = lex(r#"out("ok") // this is a comment"#);
+        let tokens = lex(r#"out("ok") // this is a comment"#).unwrap();
         let important = without_structure(&tokens);
 
         // the comment words should NOT show up as tokens!
@@ -505,7 +551,7 @@ mod tests {
     // -------------------------------------------------------------------------
     #[test]
     fn lex_number_literals() {
-        let tokens = lex("x = 42\nf = 3.14");
+        let tokens = lex("x = 42\nf = 3.14").unwrap();
         let important = without_structure(&tokens);
 
         assert!(important.contains(&TokenKind::NumberLiteral(42)));
@@ -518,7 +564,7 @@ mod tests {
     // -------------------------------------------------------------------------
     #[test]
     fn lex_keywords() {
-        let tokens = lex("for in range through true false");
+        let tokens = lex("for in range through true false").unwrap();
         let important = without_structure(&tokens);
 
         assert_eq!(
@@ -542,7 +588,7 @@ mod tests {
     #[test]
     fn emits_indent_and_dedent() {
         let source = "outer()\n    inner()";
-        let tokens = lex(source);
+        let tokens = lex(source).unwrap();
 
         assert!(has_kind(&tokens, TokenKind::Indent));
         assert!(has_kind(&tokens, TokenKind::Dedent));
@@ -554,7 +600,7 @@ mod tests {
     // -------------------------------------------------------------------------
     #[test]
     fn lex_operators() {
-        let tokens = lex("a + b - c * d / e = f");
+        let tokens = lex("a + b - c * d / e = f").unwrap();
         let important = without_structure(&tokens);
 
         assert!(important.contains(&TokenKind::Plus));
@@ -562,5 +608,14 @@ mod tests {
         assert!(important.contains(&TokenKind::Star));
         assert!(important.contains(&TokenKind::Slash));
         assert!(important.contains(&TokenKind::Equal));
+    }
+
+    #[test]
+    fn lex_errors_have_locations_and_plain_words() {
+        let error = lex("out(@)").unwrap_err();
+
+        assert_eq!(error.span.line, 1);
+        assert_eq!(error.span.column, 5);
+        assert!(error.message.contains("@"));
     }
 }

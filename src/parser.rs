@@ -8,18 +8,23 @@ use crate::token::{Token, TokenKind};
 struct Parser {
     tokens: Vec<Token>,
     pos: usize,
+    fallback: Token,
 }
 
 impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, pos: 0 }
+        Parser {
+            tokens,
+            pos: 0,
+            fallback: Token::at(TokenKind::EOF, 1, 1, 1),
+        }
     }
 
     fn current(&self) -> &Token {
         self.tokens
             .get(self.pos)
             .or_else(|| self.tokens.last())
-            .expect("parser always receives at least an EOF token")
+            .unwrap_or(&self.fallback)
     }
 
     fn current_kind(&self) -> &TokenKind {
@@ -320,7 +325,10 @@ impl Parser {
             None
         };
 
-        let mut span = value.as_ref().map(|expr| start.merge(expr.span)).unwrap_or(start);
+        let mut span = value
+            .as_ref()
+            .map(|expr| start.merge(expr.span))
+            .unwrap_or(start);
         if let Some(end) = self.consume_optional_semicolon() {
             span = span.merge(end);
         }
@@ -783,8 +791,7 @@ mod tests {
                         assert!(matches!(left.kind, ExprKind::NumberLiteral(2)));
                         match &right.kind {
                             ExprKind::BinaryOp {
-                                op: BinaryOp::Mul,
-                                ..
+                                op: BinaryOp::Mul, ..
                             } => {}
                             other => panic!("expected multiply on the right, got {:?}", other),
                         }
@@ -845,21 +852,30 @@ mod tests {
         assert!(matches!(
             &program[0].kind,
             StmtKind::VariableDeclaration {
-                value: Expr { kind: ExprKind::BoolLiteral(true), .. },
+                value: Expr {
+                    kind: ExprKind::BoolLiteral(true),
+                    ..
+                },
                 ..
             }
         ));
         assert!(matches!(
             &program[1].kind,
             StmtKind::VariableDeclaration {
-                value: Expr { kind: ExprKind::BoolLiteral(false), .. },
+                value: Expr {
+                    kind: ExprKind::BoolLiteral(false),
+                    ..
+                },
                 ..
             }
         ));
         assert!(matches!(
             &program[2].kind,
             StmtKind::VariableDeclaration {
-                value: Expr { kind: ExprKind::CharLiteral('x'), .. },
+                value: Expr {
+                    kind: ExprKind::CharLiteral('x'),
+                    ..
+                },
                 ..
             }
         ));

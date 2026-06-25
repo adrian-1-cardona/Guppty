@@ -12,19 +12,19 @@
 // That's it! The main.rs just connects everything together.
 
 // --- These lines tell Rust "hey, I have code in these other files, use them!" ---
-mod error;        // nice error messages with line/column/span
-mod token;        // our LEGO piece types (what kinds of tokens exist)
-mod syntax;       // the menu of special words — change syntax in ONE place!
-mod lexer;        // the cookie cutter (breaks code into tokens)
-mod ast;          // the family tree structure (how code pieces relate)
-mod parser;       // the detective (figures out what tokens mean together)
-mod environment;  // the boxes that hold variables (scopes!)
-mod value;        // the runtime values (actual data when program runs)
-mod interpreter;  // the actor (reads the script and performs it)
+mod ast; // the family tree structure (how code pieces relate)
+mod environment; // the boxes that hold variables (scopes!)
+mod error; // nice error messages with line/column/span
+mod interpreter;
+mod lexer; // the cookie cutter (breaks code into tokens)
+mod parser; // the detective (figures out what tokens mean together)
+mod syntax; // the menu of special words — change syntax in ONE place!
+mod token; // our LEGO piece types (what kinds of tokens exist)
+mod value; // the runtime values (actual data when program runs) // the actor (reads the script and performs it)
 
 // --- We need these tools from Rust's standard library ---
-use std::env;    // Lets us read command-line arguments (like the filename)
-use std::fs;     // Lets us read files from disk
+use std::env; // Lets us read command-line arguments (like the filename)
+use std::fs; // Lets us read files from disk
 
 fn main() {
     // Step 1: Grab the command-line arguments
