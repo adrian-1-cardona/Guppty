@@ -33,19 +33,24 @@
           </details>
 
           <details open>
+            <summary>About Guppty</summary>
+            <a href="#about" class="nav-link" data-doc-page="about">About Guppty</a>
+            <a href="#benchmarks" class="nav-link" data-doc-page="about">VM Benchmarks</a>
+            <a href="#why" class="nav-link" data-doc-page="about">Why Guppty?</a>
+            <a href="#architecture" class="nav-link" data-doc-page="about">Technologies Used</a>
+            <a href="#lessons" class="nav-link" data-doc-page="about">What I Learned</a>
+          </details>
+
+          <details open>
             <summary>Learn Guppty</summary>
-            <a href="#why" class="nav-link" data-doc-page="learn">Why Guppty?</a>
             <a href="#syntax" class="nav-link" data-doc-page="learn">Syntax</a>
             <a href="#examples" class="nav-link" data-doc-page="learn">Examples</a>
-            <a href="#architecture" class="nav-link" data-doc-page="learn">Technologies Used</a>
-            <a href="#lessons" class="nav-link" data-doc-page="learn">What I Learned</a>
           </details>
 
           <details open>
             <summary>Project</summary>
             <a href="#contribute" class="nav-link" data-doc-page="project">Contribute</a>
             <a href="#troubleshooting" class="nav-link" data-doc-page="project">Common Issues</a>
-            <a href="#pages" class="nav-link" data-doc-page="project">GitHub Pages</a>
             <a href="#updates" class="nav-link" data-doc-page="project">Updates</a>
           </details>
 
@@ -61,19 +66,24 @@
           <p class="eyebrow">Version 0.1.0</p>
           <h1>Installation Guide</h1>
           <p class="hero-copy">
-            Guppty is a small indentation-based programming language written in Rust.
-            The setup is plain on purpose: install Rust, grab the repo, install the
-            local command, and run a `.gup` file from your terminal.
+            Guppty is a small, indentation-based programming language written entirely in Rust. It was designed from the ground up as a learning tool, something you can install in a few minutes and immediately start experimenting with. The language compiles your source files into bytecode and runs them on a lightweight virtual machine, which means you get to see every stage of the pipeline from raw text to actual execution without needing any external dependencies beyond the Rust toolchain itself.
+          </p>
+          <p class="hero-copy">
+            The installation process is intentionally straightforward. There is no package manager to configure, no complex build system to fight with, and no hidden environment variables to set. You install Rust, you clone the repository, you run a single Cargo command, and then you have a working command-line tool that can execute any file ending in the .gup extension. The whole thing takes about two minutes on a modern internet connection, and at the end of it you will have a fully functional programming language sitting on your machine, ready to run.
           </p>
 
           <div class="quick-install" aria-label="Quick installation commands">
             <div class="section-heading">
               <div>
                 <h2>Quick Installation</h2>
-                <p>For macOS, Linux, and Windows.</p>
+                <p>For macOS, Linux, and Windows</p>
               </div>
               <div class="status-chip">Rust + Cargo</div>
             </div>
+
+            <p>
+              The installation steps below will guide you through setting up Guppty on your system regardless of which operating system you are running. The process is nearly identical across all three platforms because Rust and Cargo handle the cross-platform compilation details for you. The only real difference is how you initially install the Rust toolchain itself. On macOS and Linux, you use the official rustup installer script. On Windows, you can use winget or download the installer directly from the Rust website. Once Rust is in place, every other step is exactly the same no matter what machine you are sitting in front of.
+            </p>
 
             <div class="tabs" role="tablist" aria-label="Operating system install commands">
               <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="mac-panel" data-tab="mac">macOS</button>
@@ -84,7 +94,7 @@
             <div class="tab-panel active" id="mac-panel" role="tabpanel" data-panel="mac">
               <ol class="install-list">
                 <li>
-                  <p>Install Rust if `cargo` is not on your machine yet.</p>
+                  <p>First, you need to install the Rust programming language on your Mac. If you have never used Rust before, this command downloads the official rustup installer, which sets up the Rust compiler, the Cargo package manager, and all the standard tools you need. The script is safe to run and will ask you to confirm before making any changes to your system. Once it finishes, you will need to restart your terminal or run the source command it suggests so that the new commands become available in your current shell session.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -101,7 +111,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Download the Guppty source code.</p>
+                  <p>Next, download the entire Guppty source code from GitHub. This command creates a new folder called Guppty in whatever directory you are currently in, and it pulls down every file in the project including the source code, the example programs, the test suite, and this documentation site. You will need git installed on your machine for this to work, but most Macs come with git preinstalled through the Xcode command line tools.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -118,7 +128,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Move into the project folder.</p>
+                  <p>Move into the project folder that was just created by the clone command. Everything from this point forward needs to happen inside this directory because Cargo looks for the Cargo.toml file to understand how to build the project.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -135,7 +145,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the local `guppty` command.</p>
+                  <p>Now install the guppty command-line tool. This command tells Cargo to compile the project in release mode and place the resulting binary into your Cargo bin directory, which is typically located at ~/.cargo/bin. After this completes, you will be able to type guppty from anywhere on your system and it will work, because Cargo's bin directory should already be on your PATH from when you installed Rust in the first step.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -152,7 +162,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the sample program and make sure it talks back.</p>
+                  <p>Finally, run one of the included example programs to confirm that everything is working correctly. The program.gup file is a small demonstration that exercises several language features at once. If you see output printed to your terminal without any error messages, your installation is complete and Guppty is ready to use.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -174,7 +184,7 @@
             <div class="tab-panel" id="linux-panel" role="tabpanel" data-panel="linux" hidden>
               <ol class="install-list">
                 <li>
-                  <p>Install Rust if you do not already have it.</p>
+                  <p>Start by installing Rust on your Linux machine. The rustup installer works on virtually every distribution and will set up the compiler, Cargo, and all the standard Rust tooling. If you are on a system that does not have curl installed, you can install it first through your distribution's package manager. After the installer finishes, restart your shell or source the environment file it points you to.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -191,7 +201,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Clone the repository.</p>
+                  <p>Clone the Guppty repository from GitHub. This pulls down the entire project including all source files, example programs, expected output files, and the documentation. You will need git installed, which most Linux distributions include by default or make available through their package manager.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -208,7 +218,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Step into the new folder.</p>
+                  <p>Change into the newly created project directory. All the build commands expect to be run from the root of the repository where the Cargo.toml configuration file lives.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -225,7 +235,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the command from this checkout.</p>
+                  <p>Install the guppty binary from this local checkout. Cargo compiles the project and places the resulting executable in ~/.cargo/bin, which should already be on your PATH from the Rust installation. The compilation will take a moment the first time as it downloads and compiles all dependencies.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -242,7 +252,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the example program.</p>
+                  <p>Run the example program to verify that your installation is working. If text appears in your terminal without errors, everything is set up correctly and you can start writing your own .gup files.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -264,7 +274,7 @@
             <div class="tab-panel" id="windows-panel" role="tabpanel" data-panel="windows" hidden>
               <ol class="install-list">
                 <li>
-                  <p>Install Rust with winget, then reopen your terminal.</p>
+                  <p>Install the Rust toolchain on Windows using winget, which is the built-in package manager available on Windows 10 and later. This command downloads and installs rustup, which in turn installs the Rust compiler and Cargo. After the installation completes, you need to close and reopen your terminal so that the new PATH entries take effect. If you do not have winget available, you can alternatively download the rustup installer directly from rustup.rs.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -281,7 +291,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Clone the repository.</p>
+                  <p>Clone the Guppty repository. This works the same way on Windows as it does on any other platform. You will need git installed, which you can get through Git for Windows or through winget. The command creates a Guppty folder in your current directory containing all the project files.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -298,7 +308,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Move into the project folder.</p>
+                  <p>Navigate into the project folder. On Windows you can use either forward slashes or backslashes for this command, both work fine in modern terminals like PowerShell or Windows Terminal.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -315,7 +325,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the `guppty` command from the local source.</p>
+                  <p>Install the guppty command from the local source code. Cargo compiles everything and places the executable in your Cargo bin directory, which is usually located at C:\Users\YourName\.cargo\bin. This directory should already be on your system PATH from the Rust installation step.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -332,7 +342,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the sample program.</p>
+                  <p>Test the installation by running one of the included example programs. Note that on Windows you use backslashes for file paths. If the program produces output without any error messages, you are all set and ready to start using Guppty.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -362,11 +372,18 @@
             <a class="ghost-link" href="https://rustup.rs" target="_blank" rel="noreferrer">Install Rust</a>
           </div>
 
+          <p>
+            If you have already completed the installation steps above, this section gives you a condensed overview of what you just did and explains the reasoning behind each step in a bit more detail. Think of it as the quick-reference version that you can come back to later when you want to remember the workflow without reading through all the explanations again. The four steps below represent the complete lifecycle of getting Guppty from nothing to running on your machine.
+          </p>
+          <p>
+            The first thing to understand is that Guppty is not distributed as a prebuilt binary yet. You are compiling it yourself from source code, which means you need the Rust compiler and its build tool, Cargo. This is actually a benefit because it means you can look at and modify any part of the language whenever you want. You are not just a user of Guppty, you have the entire implementation sitting right there on your machine, fully transparent and ready to be explored or changed.
+          </p>
+
           <div class="steps">
             <article class="step-card">
               <span class="step-number">1</span>
               <h3>Install the Rust toolchain</h3>
-              <p>Guppty is built with Rust 2021. If this prints a version, you are good.</p>
+              <p>Guppty requires the Rust 2021 edition compiler. If the command below prints a version number, you already have Rust installed and can skip ahead to step two. If it says the command is not found, head to rustup.rs and follow the installation instructions for your operating system. The whole process takes about a minute and gives you everything you need to compile Rust programs.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -386,7 +403,7 @@
             <article class="step-card">
               <span class="step-number">2</span>
               <h3>Clone the repository</h3>
-              <p>Pull down the code from GitHub so Cargo can build it locally.</p>
+              <p>Pull down the complete Guppty source code from GitHub. This gives you the compiler, the virtual machine, the interpreter, all the example programs, the test suite, and this documentation. Cargo needs the Cargo.toml file at the root of this repository to understand how to build the project, so make sure you are inside the Guppty directory before running any build commands.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -406,7 +423,7 @@
             <article class="step-card">
               <span class="step-number">3</span>
               <h3>Install the local CLI</h3>
-              <p>Run this inside the Guppty folder. It puts `guppty` on your Cargo path.</p>
+              <p>Run this inside the Guppty folder. It compiles the project in release mode and places the guppty binary into your Cargo bin directory, which should already be on your system PATH. After this step, you can run guppty from any directory on your machine. If you ever want to update to a newer version, just pull the latest changes from GitHub and run this command again.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -426,7 +443,7 @@
             <article class="step-card">
               <span class="step-number">4</span>
               <h3>Run an example</h3>
-              <p>The default backend compiles to bytecode and runs on Guppty's VM.</p>
+              <p>The default execution path compiles your .gup file into bytecode and runs it on Guppty's stack-based virtual machine. The examples folder contains dozens of small programs that demonstrate different language features, from simple hello-world printing to recursive functions and closures. Try running a few of them to get a feel for how the language works before writing your own programs.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -445,16 +462,19 @@
           </div>
         </section>
 
-        <section class="docs-section split-section" id="download">
-          <div>
-            <p class="eyebrow">Download</p>
-            <h2>Get Guppty</h2>
-            <p>
-              Right now, Guppty is happiest when you install it from source. The
-              ZIP is useful if you do not want to clone the repo, and binary
-              downloads can come later once releases are set up.
-            </p>
-          </div>
+        <section class="docs-section" id="download">
+          <p class="eyebrow">Download</p>
+          <h2>Get Guppty</h2>
+          <p>
+            At this point in the project's life, the recommended way to get Guppty is to build it from source. This might sound intimidating if you are used to downloading an installer or a prebuilt binary, but it is genuinely simple because Cargo handles all the heavy lifting for you. You run one command and it compiles everything, resolves dependencies, and produces a working executable. There is nothing to configure and nothing that can go wrong as long as you have Rust installed.
+          </p>
+          <p>
+            That said, there are times when you might want the source code without going through git. Maybe you are on a machine that does not have git installed, or maybe you just want a snapshot of the project to browse offline. For those situations, the ZIP download below gives you the same files you would get from cloning the repository. You can unzip it anywhere, open a terminal in that folder, and run the same cargo install command. The result is identical.
+          </p>
+          <p>
+            Prebuilt binary downloads are planned for the future once the project reaches a stable release cadence. When that happens, you will be able to download a single executable for your platform and skip the compilation step entirely. For now, building from source is the way to go, and it has the added benefit of letting you look at and modify the code whenever you feel curious about how something works.
+          </p>
+
           <div class="download-actions">
             <a class="primary-button" href="https://github.com/adrian-1-cardona/Guppty/archive/refs/heads/main.zip">
               Download source ZIP
@@ -469,16 +489,20 @@
           <p class="eyebrow">Terminal</p>
           <h2>Guppty CLI</h2>
           <p>
-            The CLI wants one thing from you: a `.gup` file. By default it lexes,
-            parses, compiles, and runs that file on the stack-based VM. Add
-            `--interp` when you want to compare the older interpreter.
+            The Guppty command-line interface is designed to be as simple as possible. You give it a file, and it runs that file. There are no subcommands to memorize, no configuration files to write, and no flags you need to remember for everyday use. The entire interface boils down to one pattern: you type guppty followed by the path to a .gup file, and the language does the rest. It lexes the source text into tokens, parses those tokens into an abstract syntax tree, compiles the tree into bytecode instructions, and then executes those instructions on the stack-based virtual machine. All of that happens in milliseconds, and the only thing you see is whatever output your program produces.
+          </p>
+          <p>
+            There is one optional flag worth knowing about. If you pass --interp after the file path, Guppty will skip the compiler and virtual machine entirely and instead run your program using the older tree-walking interpreter. This interpreter reads the AST directly and evaluates it node by node, which is a fundamentally different execution strategy than compiling to bytecode first. The results should be identical for any correct program, but the interpreter is useful when you are debugging language behavior or when you want to compare how the two backends handle a particular edge case. It is also a nice educational tool because it shows you a second way that programming languages can execute code.
+          </p>
+          <p>
+            If you are actively developing Guppty itself and do not want to reinstall the binary every time you make a change, you can use cargo run to execute programs directly from the source tree. This compiles and runs the project in one step, which is faster during development because you skip the install step. The double dash tells Cargo that everything after it is an argument for the program rather than an argument for Cargo itself.
           </p>
 
           <div class="command-grid">
             <article class="command-row">
               <div>
                 <h3>Run with the VM</h3>
-                <p>This is the everyday path.</p>
+                <p>This is the standard execution path that you will use the vast majority of the time. Your source code gets compiled into bytecode and executed on the virtual machine. It is fast, predictable, and produces clean output.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -499,7 +523,7 @@
             <article class="command-row">
               <div>
                 <h3>Run with the interpreter</h3>
-                <p>Nice when you are changing language behavior and want a second read.</p>
+                <p>The tree-walking interpreter is the alternative backend that evaluates your AST directly without compiling to bytecode first. It is useful for comparison, debugging, and understanding how two different execution models can produce the same results from the same source code.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -520,7 +544,7 @@
             <article class="command-row">
               <div>
                 <h3>Run without installing</h3>
-                <p>Handy when you are working inside the Rust project itself.</p>
+                <p>When you are working on the Guppty source code itself and making frequent changes, this command compiles and runs in one step without needing to reinstall the binary each time. The double dash separates Cargo's own arguments from the arguments that get passed through to the Guppty program.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -541,25 +565,150 @@
         </section>
         </div>
 
-        <div class="doc-page" data-doc-page-panel="learn" hidden>
+        <div class="doc-page" data-doc-page-panel="about" hidden>
+        <section class="docs-section" id="about">
+          <p class="eyebrow">Project</p>
+          <h2>About Guppty</h2>
+          <p>
+            Guppty is a small, indentation-based programming language that was built from scratch as an educational project in Rust. The core idea behind it is simple: take a plain text file with a .gup extension, turn that text into something a computer can actually execute, and make every step of that transformation visible and understandable. Unlike production languages that optimize for performance and hide their complexity behind layers of abstraction, Guppty is designed to be read, studied, and taken apart. Every component of the language pipeline lives in a single Rust crate with clearly named source files, and the entire project is small enough that a single person can hold the whole thing in their head at once.
+          </p>
+          <p>
+            The language itself supports the features you would expect from a small scripting language. You can define variables, perform arithmetic, work with strings and booleans, write conditional logic with if and else blocks, iterate with while and for loops, define functions with parameters and return values, and even create closures that capture values from their surrounding scope. The syntax is indentation-based, which means there are no curly braces or semicolons to worry about. You write your code, indent the blocks that belong inside control structures or function definitions, and the language figures out the rest. This makes the source files visually clean and easy to follow, especially for people who are new to programming.
+          </p>
+          <p>
+            Under the hood, Guppty has two separate execution backends. The primary path, which is the default when you run a program, involves a compiler that transforms the abstract syntax tree into a sequence of bytecode instructions, and a virtual machine that executes those instructions using a stack-based architecture. The secondary path is a tree-walking interpreter that reads the AST directly and evaluates it node by node without any intermediate compilation step. Both backends produce identical results for any correct program, and they exist side by side so that you can compare how the same source code gets handled by two fundamentally different execution strategies. The VM is faster for complex programs and represents the more modern approach to language implementation, while the interpreter is simpler to understand and serves as a reference implementation that you can use to verify the compiler's correctness.
+          </p>
+          <p>
+            The project also includes a comprehensive set of example programs in the examples directory, each paired with an expected output file that defines exactly what the program should print. These examples serve double duty: they demonstrate language features to new users, and they form the basis of the integration test suite that runs every time you modify the language. This means that if you change something in the lexer, parser, compiler, or VM, and that change breaks the behavior of any example program, the tests will catch it immediately. It is a tight feedback loop that keeps the language honest and makes it safe to experiment with changes.
+          </p>
+        </section>
+
+        <section class="docs-section" id="benchmarks">
+          <p class="eyebrow">Performance</p>
+          <h2>VM Benchmarks</h2>
+          <p>
+            One of the most interesting aspects of having two execution backends in the same project is that you can measure them against each other. The benchmark below compares the average end-to-end runtime of the bytecode-compiled VM path against the tree-walking interpreter path, using the recursion_fib.gup example program as the test case. This program computes Fibonacci numbers recursively, which means it generates a significant number of function calls and exercises the call stack heavily, making it a reasonable stress test for both backends.
+          </p>
+          <p>
+            The numbers you see below come from 200 consecutive runs of the release-built binary on the same machine, measuring the total wall-clock time from process start to process exit. This includes not just the execution of the Guppty program itself, but also process startup, file I/O to read the source file, lexing, parsing, and in the case of the VM path, compilation to bytecode. Because the test program is quite small, process startup and file reading represent a large fraction of the total time, which is why the two backends appear so close to each other in these results.
+          </p>
+
+          <div
+            class="benchmark-chart"
+            role="img"
+            aria-label="Benchmark chart comparing average end-to-end runtime. The VM averaged 2.69 milliseconds and the tree-walker averaged 2.64 milliseconds."
+          >
+            <div class="benchmark-row">
+              <span>VM (compile + execute)</span>
+              <span class="benchmark-track"><span class="benchmark-bar vm-bar"></span></span>
+              <span>2.69 ms</span>
+            </div>
+            <div class="benchmark-row">
+              <span>Tree-walker (interpret)</span>
+              <span class="benchmark-track"><span class="benchmark-bar tree-bar"></span></span>
+              <span>2.64 ms</span>
+            </div>
+          </div>
+
+          <p>
+            The key takeaway here is not that one backend is faster than the other. At this scale, the difference is negligible and falls well within the margin of measurement noise. What matters is that both backends are measurable and comparable, which means that as the language grows and programs get more complex, you will be able to see exactly how changes to the compiler or VM affect performance relative to the simpler interpreter baseline. The benchmark infrastructure exists so that future optimizations have a clear before-and-after comparison point.
+          </p>
+          <p>
+            It is also worth noting that the VM path includes an extra step that the interpreter does not: the compilation phase where the AST gets transformed into bytecode. For tiny programs like this fibonacci example, that extra work is barely noticeable. But for larger programs with many functions and complex control flow, the VM path should eventually pull ahead because it executes precompiled instructions rather than re-interpreting the tree structure on every evaluation. The compilation step is an upfront cost that pays for itself as program complexity increases.
+          </p>
+          <p>
+            If you want to run these benchmarks yourself, you can build the project in release mode and use a simple timing loop in your shell. The command looks something like running the release binary 200 times against the recursion_fib.gup example and averaging the results. The exact numbers will vary depending on your hardware, but the relative comparison between the two backends should remain consistent across different machines.
+          </p>
+        </section>
+
         <section class="docs-section" id="why">
           <p class="eyebrow">Purpose</p>
           <h2>Why Guppty?</h2>
-          <div class="text-columns">
-            <p>
-              Guppty is tiny on purpose. You can read the whole thing, change a
-              keyword, add a small feature, and actually see how that choice moves
-              through the language pipeline.
-            </p>
-            <p>
-              It is not trying to be the next giant production language. It is a
-              clear little playground for learning lexers, parsers, bytecode,
-              scopes, functions, closures, and the very satisfying moment when a
-              file named `hello.gup` finally runs.
-            </p>
+          <p>
+            The world does not need another programming language for building production software. There are already excellent tools for every imaginable use case, from systems programming to web development to data science. Guppty exists for a completely different reason: it is a learning tool. It was built to answer the question of what actually happens when you type some text into a file and tell a computer to run it. Most programmers use languages every day without ever looking under the hood, and that is perfectly fine for getting work done. But if you have ever been curious about how a programming language actually works at a fundamental level, from raw text to executed instructions, Guppty gives you a complete and readable implementation to study.
+          </p>
+          <p>
+            The project is intentionally small. The entire source code fits in a handful of Rust files, and none of them are particularly long or complex. You can read the lexer and understand exactly how characters become tokens. You can read the parser and see how tokens become an abstract syntax tree. You can read the compiler and trace how each AST node maps to a sequence of bytecode instructions. And you can read the VM and watch how those instructions get executed one by one on a simple stack. Every step is transparent, every decision is local, and there is nothing hidden behind layers of abstraction that you would need a PhD in computer science to understand.
+          </p>
+          <p>
+            This size constraint is not a limitation; it is a deliberate design choice. When a language is small enough to fit in your head entirely, you can make changes to it and immediately understand the consequences. You can add a new keyword to the syntax definition file, update the lexer to recognize it, extend the parser to handle it, teach the compiler to emit bytecode for it, and make the VM execute that bytecode, all in a single afternoon. That kind of immediate, end-to-end feedback is incredibly powerful for building intuition about how languages work. You are not just reading about compiler theory in a textbook; you are actually doing it, with real code that compiles and runs.
+          </p>
+          <p>
+            Guppty also serves as a personal portfolio piece and a demonstration of what it takes to build a language from nothing. The project shows competence with Rust, understanding of data structures and algorithms, familiarity with testing practices, and the ability to manage a multi-component system where changes in one place ripple through many others. It is the kind of project that demonstrates depth of understanding rather than breadth of feature coverage, and that is exactly what makes it valuable both as a learning experience and as something to share with others.
+          </p>
+        </section>
+
+        <section class="docs-section" id="architecture">
+          <p class="eyebrow">Under the Hood</p>
+          <h2>Technologies Used</h2>
+          <p>
+            Guppty is built with a deliberately small technology stack. The entire project is written in Rust using the 2021 edition, and it has zero external runtime dependencies. This was a conscious choice: by avoiding external crates for the core language implementation, every line of code in the lexer, parser, compiler, and VM was written by hand and can be read without needing to understand someone else's library. The only tool you need to build and run Guppty is the standard Rust toolchain, which includes the compiler and the Cargo build system.
+          </p>
+          <p>
+            The language follows a classic pipeline architecture that you would find in any compiler textbook, but implemented in a way that is easy to follow and modify. Source code enters the pipeline as raw text and flows through four distinct stages before producing output. Each stage transforms the data into a progressively more structured form, and each stage is implemented in its own dedicated source file so you can study them in isolation.
+          </p>
+
+          <div class="pipeline" aria-label="Guppty language pipeline">
+            <div><span>Source</span><span>.gup file</span></div>
+            <div><span>Lexer</span><span>tokens</span></div>
+            <div><span>Parser</span><span>AST</span></div>
+            <div><span>Compiler</span><span>bytecode</span></div>
+            <div><span>VM</span><span>stdout</span></div>
+          </div>
+
+          <p>
+            The first stage is the lexer, which reads the raw characters of your source file and groups them into meaningful tokens like numbers, strings, identifiers, operators, and keywords. The lexer also handles indentation tracking, which is what allows Guppty to use whitespace for block structure instead of braces. The second stage is the parser, which takes the flat sequence of tokens and builds them into a hierarchical abstract syntax tree that represents the logical structure of your program. The third stage is the compiler, which walks the AST and emits a sequence of bytecode instructions that encode the same logic in a format the VM can execute efficiently. And the final stage is the virtual machine, which reads those bytecode instructions one at a time and executes them on a stack, producing the output your program was designed to generate.
+          </p>
+
+          <div class="tech-grid">
+            <article>
+              <h3>Rust 2021</h3>
+              <p>
+                Rust was chosen as the implementation language because it provides the exact combination of features that a language tool needs. It compiles to a fast native binary that starts up instantly, which means the CLI feels responsive even for trivial programs. Its type system with enums and pattern matching is ideal for representing tokens, AST nodes, and bytecode instructions in a way that the compiler can check for completeness. And Cargo provides a built-in test runner, build system, and dependency manager that makes the development workflow smooth and repeatable across different machines and operating systems.
+              </p>
+            </article>
+            <article>
+              <h3>Stack VM</h3>
+              <p>
+                The stack-based virtual machine is the default execution backend and represents the more sophisticated of the two approaches to running Guppty programs. It works by maintaining a value stack and a call frame stack, pushing and popping values as it executes instructions. This architecture separates the concerns of compilation and execution, which means you can optimize the compiler without touching the VM, or improve the VM without changing how bytecode is generated. It is the same fundamental design used by languages like Java, Python, and Lua in their virtual machines.
+              </p>
+            </article>
+            <article>
+              <h3>Tree Interpreter</h3>
+              <p>
+                The tree-walking interpreter is the alternative execution backend, accessible through the --interp flag. It works by traversing the AST directly, evaluating each node as it encounters it. This approach is simpler to implement and easier to reason about, which makes it a good reference implementation. When you make changes to the compiler or VM and want to verify that the new behavior is correct, you can run the same program through the interpreter and compare the output. If both backends produce the same result, you can be confident that your change is semantically correct.
+              </p>
+            </article>
+            <article>
+              <h3>Integration Tests</h3>
+              <p>
+                The test suite works by running real .gup example programs through the language pipeline and comparing their actual output against expected output files stored in the repository. This approach has several advantages over unit testing individual components: it tests the entire system end-to-end, it uses the same programs that users see in the documentation, and it catches regressions at the behavior level rather than the implementation level. If a test fails, you know exactly what the user would see differently, which makes debugging straightforward.
+              </p>
+            </article>
           </div>
         </section>
 
+        <section class="docs-section" id="lessons">
+          <p class="eyebrow">Notes</p>
+          <h2>What I Learned</h2>
+          <p>
+            Building a programming language from scratch, even a small one, teaches you things that you cannot learn any other way. There is a fundamental difference between reading about how compilers work in a textbook and actually implementing one yourself, feeling the friction of real decisions, debugging real edge cases, and experiencing the satisfaction of watching your language run a program for the first time. The lessons below are the most significant things this project taught me, not just about language implementation specifically, but about software engineering in general.
+          </p>
+          <div class="note-list">
+            <p>
+              Language features connect faster than you expect. When you add a single new keyword or operator to the language, that change touches almost every layer of the system. You update the syntax definition, modify the lexer to recognize the new token, extend the parser to handle the new grammar rule, teach the compiler to emit appropriate bytecode for it, and update the VM to execute that bytecode correctly. Then you write an example program that uses the feature, create an expected output file, and verify that both backends produce the same result. What seems like a small addition from the outside turns out to be a journey through the entire codebase, and that is exactly what makes it educational.
+            </p>
+            <p>
+              Example programs are deceptively powerful. The .gup files in the examples directory look like simple demonstrations for users, but they quietly serve as the foundation of the entire testing strategy. Every time you run the test suite, those examples are compiled and executed, and their output is compared against the expected files. This means that the documentation and the test suite are the same thing, which keeps them permanently synchronized. You cannot break a feature without breaking a test, and you cannot add a test without also creating a demonstration that users can learn from.
+            </p>
+            <p>
+              Error messages matter more than almost any other feature. A language can have beautiful syntax and elegant semantics, but if it responds to mistakes with cryptic messages or unhelpful line numbers, people will hate using it. Spending time on clear, located error messages with context about what went wrong and where makes the CLI feel like a real tool rather than a frustrating puzzle. It is the difference between "unexpected token" and "expected a closing parenthesis on line 7, but found the end of the line instead." The second version respects the user's time and helps them fix the problem immediately.
+            </p>
+          </div>
+        </section>
+                </div>
+
+        <div class="doc-page" data-doc-page-panel="learn" hidden>
         <section class="docs-section" id="syntax">
           <div class="section-heading">
             <div>
@@ -568,6 +717,16 @@
             </div>
             <span class="status-chip">Indentation based</span>
           </div>
+
+          <p>
+            Guppty uses indentation to define code blocks rather than curly braces, semicolons, or keywords like "end". This design choice was inspired by Python's approach to code structure, where the visual layout of your code directly corresponds to its logical structure. When you write an if statement, the lines that should execute conditionally are simply indented one level deeper than the if keyword itself. When you define a function, the body of that function is everything that is indented beneath the function signature. This makes Guppty code visually clean and forces a consistent formatting style that makes programs easy to read at a glance.
+          </p>
+          <p>
+            The language supports several fundamental data types: integers, floating-point numbers, strings enclosed in double quotes, single characters enclosed in single quotes, booleans with the values true and false, and arrays for holding ordered collections of values. Variables are created by assignment without any type annotation or declaration keyword. You simply write the name, an equals sign, and the value you want to store, and the language infers the type from whatever you assign to it. This keeps the syntax minimal and reduces the ceremony needed to get things done.
+          </p>
+          <p>
+            Below you can explore the different syntax categories by clicking through the tabs. Each one shows a small code example that demonstrates a particular feature of the language, from basic variable assignment and output to control flow, function definitions, closures, and comments. These examples are all runnable programs, meaning you can save any of them to a .gup file and execute them with the guppty command to see the output.
+          </p>
 
           <div class="syntax-layout">
             <div class="syntax-list" role="tablist" aria-label="Syntax examples">
@@ -581,7 +740,7 @@
             <div class="syntax-panels">
               <article class="syntax-panel active" data-syntax-panel="basics">
                 <h3>Variables, values, and output</h3>
-                <p>Use `out(...)` to print values. Numbers, floats, strings, chars, booleans, and arrays are supported.</p>
+                <p>The out() function is how you print values to the terminal. You can pass it any expression and it will display the result. Variables are created simply by assigning a value to a name. There is no let, var, or const keyword needed. The language supports integers, floating-point numbers, strings in double quotes, single characters in single quotes, and boolean values. You can perform arithmetic on numbers and concatenate strings, and out() will display whatever the final evaluated result is.</p>
                 <pre><code>x = 5
 name = "Guppty"
 ready = true
@@ -592,7 +751,7 @@ out(x + 10)</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="control" hidden>
                 <h3>If, while, and for</h3>
-                <p>Blocks are controlled by indentation. `range(1 through 4)` includes the start and walks toward the end.</p>
+                <p>Control flow in Guppty works through indentation. When you write an if statement, the condition goes on the same line as the if keyword, and the code that should run when the condition is true is indented below it. The else keyword sits at the same indentation level as the if, and its body is indented beneath it in the same way. For loops use the range() function with the "through" keyword to define the iteration bounds, where range(1 through 3) will iterate with i taking the values 1, 2, and 3. While loops work the same way: the condition is on the while line, and the loop body is indented beneath it.</p>
                 <pre><code>score = 85
 if score >= 80
     out("You passed!")
@@ -605,7 +764,7 @@ for i in range(1 through 3)
 
               <article class="syntax-panel" data-syntax-panel="functions" hidden>
                 <h3>Functions and returns</h3>
-                <p>Define a function with `name(args)` followed by an indented body.</p>
+                <p>Functions in Guppty are defined by writing the function name followed by its parameters in parentheses, with the function body indented on the following lines. There is no "def" or "func" keyword. The language recognizes a function definition by seeing an identifier followed by parentheses at the start of a line. Return values are sent back using the return keyword. You can call functions by name and pass arguments just like you would in any other language. Functions can call other functions, and they can call themselves recursively.</p>
                 <pre><code>add(a, b)
     return a + b
 
@@ -614,7 +773,7 @@ out(add(2, 3))</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="closures" hidden>
                 <h3>Closures</h3>
-                <p>Functions can capture values from the scope where they were defined.</p>
+                <p>Closures are functions that capture and remember values from the scope in which they were defined, even after that scope has finished executing. In Guppty, you create a closure by defining a function inside another function and then returning it. The inner function has access to the outer function's variables, and those variables remain alive as long as the closure exists. This is a powerful pattern that enables things like factory functions, stateful callbacks, and encapsulated counters. The example below shows a makeAdder function that creates and returns a closure which remembers the value of x from its parent scope.</p>
                 <pre><code>makeAdder(x)
     addIt(y)
         return x + y
@@ -626,7 +785,7 @@ out(adder(3))</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="comments" hidden>
                 <h3>Comments</h3>
-                <p>Double slash comments can sit on their own line or after code.</p>
+                <p>Comments in Guppty use the double-slash syntax that will be familiar to anyone who has used C, Java, JavaScript, or Rust. A comment starts with two forward slashes and continues to the end of the line. Everything after the double slash is ignored by the lexer and does not affect the behavior of your program. Comments can appear on their own line, or they can be placed after a statement on the same line. They are useful for leaving notes to yourself or others about what your code does, why a particular approach was chosen, or what you plan to change in the future.</p>
                 <pre><code>// this is a comment
 out(42) // this is an inline comment</code></pre>
               </article>
@@ -638,14 +797,16 @@ out(42) // this is an inline comment</code></pre>
           <p class="eyebrow">Programs</p>
           <h2>Examples</h2>
           <p>
-            The `examples/` folder is the easiest way to get a feel for the
-            language. Each program is small enough to skim, and the matching
-            `examples/expected/` file shows exactly what should print.
+            The examples directory is the best place to start when you want to understand what Guppty code looks like in practice. Every file in that directory is a complete, runnable program that demonstrates one or more language features. The programs are deliberately small, usually just a few lines, so you can read them in seconds and understand exactly what they do. Each example has a corresponding file in the examples/expected subdirectory that contains the exact output the program should produce, which means you can verify that your installation is working correctly by comparing the actual output against the expected output.
+          </p>
+          <p>
+            The examples below show three different programs that represent increasing levels of language complexity. The hello world example is the simplest possible Guppty program, just a single line that prints a string. The recursion example shows how functions can call themselves to solve problems that have a naturally recursive structure. And the closure counter example demonstrates one of the more advanced features of the language: the ability to create functions that maintain their own private state through captured variables. Together, these three programs give you a good sense of the range of things Guppty can express, from trivial one-liners to patterns that would be right at home in a production codebase.
           </p>
 
           <div class="example-grid">
             <article>
               <h3>Hello World</h3>
+              <p>The simplest Guppty program. A single call to out() with a string argument prints that string to the terminal and exits. This is the first program most people write when learning a new language, and in Guppty it could not be any shorter.</p>
               <pre><code>out("Hello World!")</code></pre>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -665,6 +826,7 @@ out(42) // this is an inline comment</code></pre>
 
             <article>
               <h3>Recursion</h3>
+              <p>This program defines a factorial function that calls itself with a smaller argument until it reaches the base case. Recursion is fully supported in both the VM and interpreter backends, including deep call stacks and proper return value propagation.</p>
               <pre><code>factorial(n)
     if n <= 1
         return 1
@@ -689,6 +851,7 @@ out(factorial(5))</code></pre>
 
             <article>
               <h3>Closure Counter</h3>
+              <p>This example creates a counter function that maintains its own internal state. Each time you call the returned increment function, it updates and returns the count. The captured count variable lives on even after makeCounter has returned, which is the essence of how closures work.</p>
               <pre><code>makeCounter(start)
     count = start
     increment()
@@ -713,46 +876,6 @@ out(factorial(5))</code></pre>
           </div>
         </section>
 
-        <section class="docs-section" id="architecture">
-          <p class="eyebrow">Under the Hood</p>
-          <h2>Technologies Used</h2>
-          <div class="pipeline" aria-label="Guppty language pipeline">
-            <div><strong>Source</strong><span>.gup file</span></div>
-            <div><strong>Lexer</strong><span>tokens</span></div>
-            <div><strong>Parser</strong><span>AST</span></div>
-            <div><strong>Compiler</strong><span>bytecode</span></div>
-            <div><strong>VM</strong><span>stdout</span></div>
-          </div>
-
-          <div class="tech-grid">
-            <article>
-              <h3>Rust 2021</h3>
-              <p>Rust and Cargo handle the CLI, tests, and release builds without extra tooling.</p>
-            </article>
-            <article>
-              <h3>Stack VM</h3>
-              <p>The default backend compiles source into bytecode and executes it on a virtual machine.</p>
-            </article>
-            <article>
-              <h3>Tree Interpreter</h3>
-              <p>The `--interp` flag keeps the older interpreter available for comparison and debugging.</p>
-            </article>
-            <article>
-              <h3>Integration Tests</h3>
-              <p>Every example program can be run and compared against its expected stdout.</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="docs-section" id="lessons">
-          <p class="eyebrow">Notes</p>
-          <h2>What I Learned</h2>
-          <div class="note-list">
-            <p><strong>Language features connect fast.</strong> A small syntax change can touch lexing, parsing, compilation, runtime values, examples, and tests.</p>
-            <p><strong>Examples are quiet little guardrails.</strong> The `.gup` files show people what to write and keep the implementation honest at the same time.</p>
-            <p><strong>Errors matter more than they look.</strong> A friendly message with a real location makes the CLI feel like a tool instead of a guessing game.</p>
-          </div>
-        </section>
         </div>
 
         <div class="doc-page" data-doc-page-panel="project" hidden>
@@ -760,88 +883,80 @@ out(factorial(5))</code></pre>
           <p class="eyebrow">Community</p>
           <h2>Contribute</h2>
           <p>
-            Small, focused pull requests are easiest to review. If you change language
-            behavior, update or add a `.gup` example and the matching expected output.
+            Guppty is an open-source project that welcomes contributions from anyone who finds it interesting, regardless of experience level. Whether you want to fix a bug, add a new language feature, improve error messages, write documentation, or simply run the test suite and report what happens, your involvement makes the project better. The codebase is intentionally small and well-organized, which means getting oriented does not take long. You can read through the main source files in an afternoon and have a solid understanding of how everything fits together.
+          </p>
+          <p>
+            The contribution workflow follows standard GitHub practices. Fork the repository, create a branch for your change, make your modifications, run the test suite to make sure nothing is broken, and open a pull request with a clear description of what you changed and why. Small, focused pull requests are much easier to review than large ones that touch many files at once, so try to keep each pull request focused on a single concern. If you are adding a new language feature, include a new example .gup file that demonstrates the feature and a matching expected output file so it becomes part of the test suite automatically.
+          </p>
+          <p>
+            There are a few guidelines worth keeping in mind when you contribute. First, always run cargo test before opening a pull request. The test suite is the single source of truth for whether the language still behaves correctly, and it catches most regressions immediately. Second, if you are adding or modifying syntax keywords, keep them centralized in src/syntax.rs rather than scattering string literals across multiple files. This makes it easy to see all the reserved words in one place and reduces the chance of inconsistencies. Third, make sure you are not accidentally committing the target directory, which contains compiled build artifacts that do not belong in the repository. The .gitignore file should handle this automatically, but it is worth double-checking if you are new to Rust projects.
+          </p>
+          <p>
+            If you are unsure where to start, look at the existing example programs and try writing a new one that exercises a combination of features in an interesting way. Or pick one of the error messages in the language and see if you can make it clearer or more helpful. Or look at the issues tab on GitHub to see if there are any open items that match your interests. Every contribution, no matter how small, helps the project grow and improves the experience for everyone who uses it.
           </p>
 
           <div class="checklist">
             <label><input type="checkbox" checked disabled> Install Rust from rustup.rs</label>
-            <label><input type="checkbox" checked disabled> Run `cargo test` before opening a pull request</label>
-            <label><input type="checkbox" checked disabled> Keep syntax words centralized in `src/syntax.rs` when possible</label>
-            <label><input type="checkbox" checked disabled> Avoid committing Cargo build output from `target/`</label>
+            <label><input type="checkbox" checked disabled> Run cargo test before opening a pull request</label>
+            <label><input type="checkbox" checked disabled> Keep syntax words centralized in src/syntax.rs when possible</label>
+            <label><input type="checkbox" checked disabled> Avoid committing Cargo build output from target/</label>
           </div>
         </section>
 
         <section class="docs-section" id="troubleshooting">
           <p class="eyebrow">Troubleshooting</p>
           <h2>Common Issues</h2>
-
-          <div class="accordion">
-            <details open>
-              <summary>`cargo` or `rustc` is not found</summary>
-              <p>Install Rust from <a href="https://rustup.rs" target="_blank" rel="noreferrer">rustup.rs</a>, then restart your terminal so Cargo's bin directory is on your PATH.</p>
-            </details>
-            <details>
-              <summary>`guppty` is not found after install</summary>
-              <p>Run `cargo install --path .` from the repository root. If it succeeds but the command is missing, add Cargo's bin directory to your shell PATH.</p>
-            </details>
-            <details>
-              <summary>The CLI cannot read my file</summary>
-              <p>Check that the file path is correct and that the file ends in `.gup`. The command shape is `guppty path/to/file.gup`.</p>
-            </details>
-            <details>
-              <summary>Indented blocks behave unexpectedly</summary>
-              <p>Keep the block body consistently indented after `if`, `else`, `while`, `for`, and function definitions.</p>
-            </details>
-            <details>
-              <summary>How do I check that everything still works?</summary>
-              <p>Run `cargo test`. The test suite builds the project and checks the example programs against expected output files.</p>
-            </details>
-          </div>
-        </section>
-
-        <section class="docs-section" id="pages">
-          <p class="eyebrow">Publishing</p>
-          <h2>GitHub Pages</h2>
           <p>
-            This documentation site is intentionally built in `/docs`. To publish it
-            on GitHub Pages, open the repository settings and choose the `/docs`
-            folder as the Pages source for the branch you publish from.
+            When you are working with a project that builds from source and runs on multiple operating systems, you will occasionally run into setup problems. Most of these issues have straightforward solutions, and nearly all of them come down to either a missing tool on your PATH or a misunderstanding about how the build process works. Below are the most common problems people encounter when getting started with Guppty, along with detailed explanations of what causes each one and how to fix it.
           </p>
 
-          <ol class="publish-steps">
-            <li>Push this repository to GitHub.</li>
-            <li>Open <strong>Settings</strong>, then <strong>Pages</strong>.</li>
-            <li>Set <strong>Source</strong> to <strong>Deploy from a branch</strong>.</li>
-            <li>Choose the branch, usually `main`, and select the <strong>/docs</strong> folder.</li>
-            <li>Save. GitHub will serve `docs/index.html` as the public documentation page.</li>
-          </ol>
-
-          <p class="small-note">
-            For this repository, the expected project-site URL is
-            `https://adrian-1-cardona.github.io/Guppty/` after Pages is enabled.
-          </p>
+          <div class="note-list">
+            <p>
+              cargo or rustc is not found. This means the Rust toolchain is not installed on your machine, or it is installed but its bin directory is not on your shell's PATH. The fix is to install Rust from <a href="https://rustup.rs" target="_blank" rel="noreferrer">rustup.rs</a> and then restart your terminal completely. On macOS and Linux, the installer adds a line to your shell profile that puts ~/.cargo/bin on the PATH, but that change only takes effect in new terminal sessions. If you have just installed Rust and the command still is not found, opening a new terminal window or tab will almost always solve the problem. On Windows, you may need to log out and back in for the PATH change to propagate system-wide.
+            </p>
+            <p>
+              guppty is not found after install. This typically means that cargo install --path . completed successfully but the resulting binary is in a directory that your shell does not know about. The binary gets placed in ~/.cargo/bin on macOS and Linux, or in C:\Users\YourName\.cargo\bin on Windows. Verify that this directory is on your PATH by running echo $PATH on macOS/Linux or echo %PATH% on Windows and looking for the cargo bin entry. If it is missing, you need to add it manually to your shell configuration file. Another possibility is that you ran the install command from the wrong directory. Make sure you are inside the Guppty repository root where the Cargo.toml file lives when you run the command.
+            </p>
+            <p>
+              The CLI cannot read my file. This error appears when you pass a file path that does not exist or that does not end with the .gup extension. Double-check your spelling and make sure you are using the correct relative path from your current directory. The command expects the full path to the file, like guppty examples/hello.gup or guppty ./my_program.gup. If you are on Windows, you can use either forward slashes or backslashes in the path. If the file definitely exists, try using the absolute path to rule out any working-directory confusion.
+            </p>
+            <p>
+              Indented blocks behave unexpectedly. Guppty uses indentation to determine block structure, which means that inconsistent spacing can cause the parser to misinterpret your code. Make sure you are using the same indentation style throughout your file. Spaces and tabs should not be mixed. The convention in Guppty examples is four spaces per indent level. If you are using a text editor, configure it to insert spaces when you press the tab key and set the tab width to four. The most common mistake is accidentally using a different number of spaces for one line in a block, which makes the parser think the block has ended when it has not.
+            </p>
+            <p>
+              How do I check that everything still works? The simplest way to verify that the language is functioning correctly is to run cargo test from the repository root. This command builds the project and then runs the complete integration test suite, which executes every example program in the examples directory and compares the output against the corresponding expected output file. If all tests pass, the language is working as designed. If a test fails, the output will show you which example produced different output than expected, making it easy to identify what changed and where to look for the problem.
+            </p>
+          </div>
         </section>
 
         <section class="docs-section" id="updates">
           <p class="eyebrow">Updates</p>
           <h2>Release Notes</h2>
+          <p>
+            Guppty uses semantic versioning to track its progress, with the version number defined in the Cargo.toml file at the root of the repository. Each release represents a stable snapshot of the language that passes all tests and can be installed and used reliably. Below are the current release and planned future milestones for the project. As new features are added, new versions will appear here with descriptions of what changed and what you can expect from each update.
+          </p>
 
           <div class="release-list">
             <article>
               <span class="release-label">Latest</span>
               <h3>Version 0.1.0</h3>
-              <p>The current `Cargo.toml` version. It includes the CLI, VM backend, interpreter fallback, example programs, and tests.</p>
+              <p>
+                This is the initial release of Guppty and represents the foundation of the language. It includes the complete command-line interface with support for both the VM backend and the tree-walking interpreter fallback. The language supports variables, arithmetic, strings, booleans, comparisons, if/else conditionals, while loops, for loops with range, function definitions with parameters and return values, closures that capture their surrounding scope, and nested function definitions. The release also includes the full set of example programs with matching expected output files and a passing integration test suite that validates everything works correctly on every supported platform.
+              </p>
             </article>
             <article>
               <span class="release-label muted">Coming Soon</span>
               <h3>Binary Downloads</h3>
-              <p>Prebuilt binaries can be added through GitHub Releases when the project is ready for non-source installs.</p>
+              <p>
+                A future release will add prebuilt binaries for macOS, Linux, and Windows through GitHub Releases. This will allow users to download and run Guppty without needing to install the Rust toolchain or compile from source. The binaries will be built automatically through GitHub Actions on each tagged release, ensuring they are always up to date and tested. This milestone is planned for when the language reaches a stable enough state that non-developer users can benefit from it.
+              </p>
             </article>
             <article>
               <span class="release-label muted">Coming Soon</span>
               <h3>Blog</h3>
-              <p>A good place later for language design notes, VM walkthroughs, and the little decisions that make the project easier to understand.</p>
+              <p>
+                A blog section is planned as a space for writing about the design decisions, implementation challenges, and lessons learned during the development of Guppty. Topics will include deep dives into how the virtual machine works, walkthroughs of adding new features to the language, explanations of interesting compiler optimizations, and reflections on the experience of building a programming language as a learning project. The blog will be hosted alongside this documentation site and will serve as both educational content for others and a personal record of the development journey.
+              </p>
             </article>
           </div>
         </section>
