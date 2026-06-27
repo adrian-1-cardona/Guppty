@@ -196,6 +196,10 @@ p {
   color: #000;
 }
 
+.docs-section p + p {
+  margin-top: 14px;
+}
+
 .hero-copy {
   max-width: 730px;
   font-size: 1.08rem;
@@ -560,20 +564,19 @@ p {
 }
 
 .note-list,
-.checklist,
-.accordion,
-.publish-steps {
+.checklist {
   margin-top: 22px;
 }
 
 .note-list {
   display: grid;
-  gap: 14px;
+  gap: 20px;
 }
 
 .note-list p {
   padding: 0;
   background: #fff;
+  line-height: 1.7;
 }
 
 .checklist {
@@ -592,41 +595,6 @@ p {
 
 .checklist input {
   margin-top: 5px;
-}
-
-.accordion {
-  display: grid;
-  gap: 10px;
-}
-
-.accordion details {
-  padding: 0;
-  background: #fff;
-}
-
-.accordion summary {
-  cursor: pointer;
-  padding: 16px 0;
-}
-
-.accordion p {
-  padding-bottom: 18px;
-}
-
-.publish-steps {
-  padding-left: 22px;
-  color: #000;
-}
-
-.publish-steps li {
-  margin: 10px 0;
-}
-
-.small-note {
-  margin-top: 18px;
-  padding: 0;
-  background: #fff;
-  color: #000;
 }
 
 .release-list {
