@@ -51,7 +51,6 @@
             <summary>Project</summary>
             <a href="#contribute" class="nav-link" data-doc-page="project">Contribute</a>
             <a href="#troubleshooting" class="nav-link" data-doc-page="project">Common Issues</a>
-            <a href="#pages" class="nav-link" data-doc-page="project">GitHub Pages</a>
             <a href="#updates" class="nav-link" data-doc-page="project">Updates</a>
           </details>
 
@@ -928,23 +927,6 @@ out(factorial(5))</code></pre>
               How do I check that everything still works? The simplest way to verify that the language is functioning correctly is to run cargo test from the repository root. This command builds the project and then runs the complete integration test suite, which executes every example program in the examples directory and compares the output against the corresponding expected output file. If all tests pass, the language is working as designed. If a test fails, the output will show you which example produced different output than expected, making it easy to identify what changed and where to look for the problem.
             </p>
           </div>
-        </section>
-
-        <section class="docs-section" id="pages">
-          <p class="eyebrow">Publishing</p>
-          <h2>GitHub Pages</h2>
-          <p>
-            This documentation site lives inside the /docs directory of the Guppty repository, and it is designed to be served directly by GitHub Pages without any build step or static site generator. The files are plain HTML, CSS, and JavaScript, which means GitHub can serve them exactly as they are. There is no compilation, no templating engine, and no deployment pipeline to configure. You push the files to GitHub, enable Pages in the repository settings, and the site goes live within minutes.
-          </p>
-          <p>
-            The choice to use a /docs folder rather than a separate branch or an external hosting service was deliberate. Keeping the documentation in the same repository as the source code means that documentation changes can be reviewed in the same pull request as code changes. If you add a new language feature and update the documentation to describe it, both changes land in a single commit, which keeps everything synchronized. It also means that anyone who clones the repository automatically has the documentation available locally, which is convenient for offline reference or for making changes to the site itself.
-          </p>
-          <p>
-            Setting up GitHub Pages for this repository is a five-step process that takes about thirty seconds. First, push this repository to GitHub if you have not already. Second, open the repository's Settings page in the GitHub web interface. Third, navigate to the Pages section in the left sidebar. Fourth, set the source to "Deploy from a branch," choose the main branch (or whatever branch you are publishing from), and select the /docs folder as the publishing source. Fifth, click Save and wait a minute or two for GitHub to build and deploy the site. Once it is live, the documentation will be available at https://adrian-1-cardona.github.io/Guppty/ and will automatically update every time you push changes to the docs folder on the configured branch.
-          </p>
-          <p>
-            If you want to test the site locally before pushing, you can open docs/index.html directly in a browser. Because the site uses no server-side features and all paths are relative, it works perfectly when opened as a local file. This makes it easy to preview your changes and verify that everything looks correct before deploying.
-          </p>
         </section>
 
         <section class="docs-section" id="updates">

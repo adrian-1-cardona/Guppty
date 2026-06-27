@@ -97,6 +97,25 @@ pre {
   list-style: none;
   padding: 8px 0;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.docs-nav summary::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
+  transform: rotate(45deg);
+  transition: transform 180ms ease;
+  margin-right: 4px;
+}
+
+.docs-nav details[open] > summary::after {
+  transform: rotate(-135deg);
 }
 
 .docs-nav summary::-webkit-details-marker {
