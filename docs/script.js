@@ -1,6 +1,9 @@
+const content = document.querySelector(".content");
 const menuButton = document.querySelector(".mobile-menu");
 const sidebar = document.querySelector(".sidebar");
-const navLinks = document.querySelectorAll(".nav-link");
+const navLinks = [...document.querySelectorAll(".nav-link")];
+const docPagePanels = [...document.querySelectorAll("[data-doc-page-panel]")];
+const docPageLinks = [...document.querySelectorAll("[data-doc-page]")];
 
 function setMenu(open) {
   document.body.classList.toggle("menu-open", open);
@@ -84,26 +87,96 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
   });
 });
 
-const sections = [...document.querySelectorAll(".docs-section[id]")];
+function pageForHash(hash) {
+  const matchingLink = navLinks.find((link) => link.getAttribute("href") === hash);
+  if (matchingLink) return matchingLink.dataset.docPage;
 
-if ("IntersectionObserver" in window && sections.length) {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-      if (!visible) return;
-
-      navLinks.forEach((link) => {
-        link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
-      });
-    },
-    {
-      rootMargin: "-18% 0px -70% 0px",
-      threshold: [0.05, 0.2, 0.6],
-    }
-  );
-
-  sections.forEach((section) => observer.observe(section));
+  const target = document.querySelector(hash);
+  const panel = target?.closest("[data-doc-page-panel]");
+  return panel?.dataset.docPagePanel || "getting-started";
 }
+
+function firstLinkForPage(pageName) {
+  return navLinks.find((link) => link.dataset.docPage === pageName);
+}
+
+function setActiveNav(hash) {
+  navLinks.forEach((link) => {
+    link.classList.toggle("active", link.getAttribute("href") === hash);
+  });
+}
+
+function showDocPage(pageName, hash, scroll = true) {
+  const activeHash = hash || firstLinkForPage(pageName)?.getAttribute("href") || "#installation";
+
+  docPagePanels.forEach((panel) => {
+    const isActive = panel.dataset.docPagePanel === pageName;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  });
+
+  docPageLinks.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) return;
+    link.setAttribute("aria-current", link.getAttribute("href") === activeHash ? "page" : "false");
+  });
+
+  setActiveNav(activeHash);
+
+  if (!scroll || !content) return;
+
+  const target = document.querySelector(activeHash);
+  if (target) {
+    content.scrollTo({ top: 0, behavior: "auto" });
+    window.requestAnimationFrame(() => target.scrollIntoView({ block: "start" }));
+  }
+}
+
+function navigateToHash(hash, replace = false) {
+  const nextHash = hash || "#installation";
+  showDocPage(pageForHash(nextHash), nextHash);
+
+  if (replace) {
+    history.replaceState(null, "", nextHash);
+  } else if (window.location.hash !== nextHash) {
+    history.pushState(null, "", nextHash);
+  }
+}
+
+docPageLinks.forEach((link) => {
+  if (!(link instanceof HTMLAnchorElement)) return;
+
+  link.addEventListener("click", (event) => {
+    const href = link.getAttribute("href");
+    if (!href?.startsWith("#")) return;
+    event.preventDefault();
+    navigateToHash(href);
+  });
+});
+
+window.addEventListener("hashchange", () => navigateToHash(window.location.hash, true));
+
+let scrollFrame = 0;
+
+function updateActiveSectionFromScroll() {
+  if (!content) return;
+
+  const activePanel = docPagePanels.find((panel) => !panel.hidden);
+  const sections = [...(activePanel?.querySelectorAll(".docs-section[id]") || [])];
+  const contentTop = content.getBoundingClientRect().top;
+  const current =
+    sections
+      .map((section) => ({
+        section,
+        distance: Math.abs(section.getBoundingClientRect().top - contentTop - 70),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0]?.section || sections[0];
+
+  if (current) setActiveNav(`#${current.id}`);
+}
+
+content?.addEventListener("scroll", () => {
+  window.cancelAnimationFrame(scrollFrame);
+  scrollFrame = window.requestAnimationFrame(updateActiveSectionFromScroll);
+});
+
+navigateToHash(window.location.hash || "#installation", true);
