@@ -688,3 +688,400 @@ fn compare_strings(op: OpCode, left: &str, right: &str) -> bool {
     _ => false,
   }
 }
+
+// =============================================================================
+// Hand-written bytecode tests
+// =============================================================================
+// These tests skip the lexer/parser/compiler entirely and feed bytecode
+// straight to the VM. We assemble a tiny Chunk by hand (writing the recipe
+// steps ourselves), run it, then peek at the operand stack to check the robot
+// did the right thing. This gives fast, focused coverage of individual opcodes.
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::bytecode::{encode_opcode, Chunk, CompiledFunction};
+
+  /// A tiny helper for assembling bytecode without repeating boilerplate.
+  struct ChunkBuilder {
+    chunk: Chunk,
+  }
+
+  impl ChunkBuilder {
+    fn new() -> Self {
+      ChunkBuilder {
+        chunk: Chunk::new(),
+      }
+    }
+
+    /// Every byte needs a source span; tests don't care, so use a dummy one.
+    fn span() -> Span {
+      Span::new(1, 1, 1)
+    }
+
+    /// Emit a bare opcode with no operands.
+    fn op(&mut self, op: OpCode) -> &mut Self {
+      self.chunk.write(encode_opcode(op), Self::span());
+      self
+    }
+
+    /// Emit an opcode followed by a single byte operand (e.g. a slot or count).
+    fn op_byte(&mut self, op: OpCode, operand: u8) -> &mut Self {
+      self.chunk.write(encode_opcode(op), Self::span());
+      self.chunk.write(operand, Self::span());
+      self
+    }
+
+    /// Emit an opcode followed by a big-endian u16 operand (used by jumps).
+    fn op_u16(&mut self, op: OpCode, operand: u16) -> &mut Self {
+      self.chunk.write(encode_opcode(op), Self::span());
+      self.chunk.write((operand >> 8) as u8, Self::span());
+      self.chunk.write((operand & 0xff) as u8, Self::span());
+      self
+    }
+
+    /// Add a value to the constant pool and emit `Constant <index>` to push it.
+    fn push_value(&mut self, value: Value) -> &mut Self {
+      let index = self.chunk.add_constant(Constant::Value(value));
+      self.op_byte(OpCode::Constant, index as u8)
+    }
+
+    /// Add a string constant (e.g. a variable name) and return its pool index.
+    fn string_constant(&mut self, text: &str) -> u8 {
+      self.chunk.add_constant(Constant::String(text.to_string())) as u8
+    }
+
+    /// Wrap the assembled chunk in a runnable script function.
+    fn finish(&mut self) -> RcCompiledFunction {
+      Rc::new(RefCell::new(CompiledFunction {
+        name: "<test>".to_string(),
+        arity: 0,
+        chunk: std::mem::replace(&mut self.chunk, Chunk::new()),
+        upvalues: Vec::new(),
+        local_names: Vec::new(),
+      }))
+    }
+  }
+
+  /// Run a hand-built function to completion and hand back the whole VM so a
+  /// test can inspect both the operand stack and the globals cupboard.
+  ///
+  /// Our test chunks deliberately do NOT end in `Return`. When the instruction
+  /// pointer runs off the end of the code, the VM pops the (only) frame and
+  /// stops, leaving whatever we computed sitting on the stack for us to check.
+  fn run_vm(function: RcCompiledFunction) -> Vm {
+    let mut vm = Vm::new();
+    vm.frames.push(CallFrame {
+      function,
+      ip: 0,
+      stack_start: 0,
+      scope_depth: 0,
+      upvalues: Vec::new(),
+      local_slots: HashMap::new(),
+    });
+    vm.run_loop().expect("VM run should succeed");
+    vm
+  }
+
+  /// Like `run_vm` but keeps the `Result` so we can assert on failure paths.
+  fn run_result(function: RcCompiledFunction) -> Result<Vec<Value>, GupError> {
+    let mut vm = Vm::new();
+    vm.frames.push(CallFrame {
+      function,
+      ip: 0,
+      stack_start: 0,
+      scope_depth: 0,
+      upvalues: Vec::new(),
+      local_slots: HashMap::new(),
+    });
+    vm.run_loop()?;
+    Ok(vm.stack)
+  }
+
+  fn run_stack(function: RcCompiledFunction) -> Vec<Value> {
+    run_vm(function).stack
+  }
+
+  fn top(stack: &[Value]) -> &Value {
+    stack.last().expect("expected at least one value on the stack")
+  }
+
+  fn assert_number(value: &Value, expected: i64) {
+    match value {
+      Value::GuppyNumber(n) => assert_eq!(*n, expected, "wrong number on stack"),
+      other => panic!("expected GuppyNumber({expected}), got {other:?}"),
+    }
+  }
+
+  fn assert_float(value: &Value, expected: f64) {
+    match value {
+      Value::GuppyFloat(f) => {
+        assert!((f - expected).abs() < 1e-9, "expected float {expected}, got {f}")
+      }
+      other => panic!("expected GuppyFloat({expected}), got {other:?}"),
+    }
+  }
+
+  fn assert_bool(value: &Value, expected: bool) {
+    match value {
+      Value::GuppyBool(b) => assert_eq!(*b, expected, "wrong bool on stack"),
+      other => panic!("expected GuppyBool({expected}), got {other:?}"),
+    }
+  }
+
+  fn assert_string(value: &Value, expected: &str) {
+    match value {
+      Value::GuppyString(s) => assert_eq!(s, expected, "wrong string on stack"),
+      other => panic!("expected GuppyString({expected:?}), got {other:?}"),
+    }
+  }
+
+  #[test]
+  fn constant_pushes_a_value() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(42));
+    let stack = run_stack(b.finish());
+    assert_eq!(stack.len(), 1);
+    assert_number(top(&stack), 42);
+  }
+
+  #[test]
+  fn adds_two_numbers() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(2))
+      .push_value(Value::GuppyNumber(3))
+      .op(OpCode::Add);
+    assert_number(top(&run_stack(b.finish())), 5);
+  }
+
+  #[test]
+  fn subtracts_multiplies_and_divides() {
+    // 10 - 4 = 6
+    let mut sub = ChunkBuilder::new();
+    sub
+      .push_value(Value::GuppyNumber(10))
+      .push_value(Value::GuppyNumber(4))
+      .op(OpCode::Sub);
+    assert_number(top(&run_stack(sub.finish())), 6);
+
+    // 6 * 7 = 42
+    let mut mul = ChunkBuilder::new();
+    mul
+      .push_value(Value::GuppyNumber(6))
+      .push_value(Value::GuppyNumber(7))
+      .op(OpCode::Mul);
+    assert_number(top(&run_stack(mul.finish())), 42);
+
+    // 20 / 5 = 4 (two whole numbers in -> whole number out)
+    let mut div = ChunkBuilder::new();
+    div
+      .push_value(Value::GuppyNumber(20))
+      .push_value(Value::GuppyNumber(5))
+      .op(OpCode::Div);
+    assert_number(top(&run_stack(div.finish())), 4);
+  }
+
+  #[test]
+  fn a_float_operand_makes_a_float_result() {
+    // 1.5 + 2 = 3.5 (a float anywhere makes the whole answer a float)
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyFloat(1.5))
+      .push_value(Value::GuppyNumber(2))
+      .op(OpCode::Add);
+    assert_float(top(&run_stack(b.finish())), 3.5);
+  }
+
+  #[test]
+  fn dividing_by_zero_is_a_runtime_error() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(1))
+      .push_value(Value::GuppyNumber(0))
+      .op(OpCode::Div);
+    let error = run_result(b.finish()).expect_err("dividing by zero should fail");
+    assert!(
+      error.message.contains("divide by zero"),
+      "unexpected error message: {}",
+      error.message
+    );
+  }
+
+  #[test]
+  fn negate_flips_the_sign() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(5)).op(OpCode::Negate);
+    assert_number(top(&run_stack(b.finish())), -5);
+  }
+
+  #[test]
+  fn not_inverts_truthiness() {
+    // not true = false
+    let mut t = ChunkBuilder::new();
+    t.op(OpCode::True).op(OpCode::Not);
+    assert_bool(top(&run_stack(t.finish())), false);
+
+    // not nothing = true (Nothing is falsy)
+    let mut n = ChunkBuilder::new();
+    n.op(OpCode::Nil).op(OpCode::Not);
+    assert_bool(top(&run_stack(n.finish())), true);
+  }
+
+  #[test]
+  fn comparisons_push_booleans() {
+    // 2 < 3 -> true
+    let mut less = ChunkBuilder::new();
+    less
+      .push_value(Value::GuppyNumber(2))
+      .push_value(Value::GuppyNumber(3))
+      .op(OpCode::Less);
+    assert_bool(top(&run_stack(less.finish())), true);
+
+    // 2 > 3 -> false
+    let mut greater = ChunkBuilder::new();
+    greater
+      .push_value(Value::GuppyNumber(2))
+      .push_value(Value::GuppyNumber(3))
+      .op(OpCode::Greater);
+    assert_bool(top(&run_stack(greater.finish())), false);
+
+    // 4 == 4 -> true
+    let mut equal = ChunkBuilder::new();
+    equal
+      .push_value(Value::GuppyNumber(4))
+      .push_value(Value::GuppyNumber(4))
+      .op(OpCode::Equal);
+    assert_bool(top(&run_stack(equal.finish())), true);
+  }
+
+  #[test]
+  fn add_concatenates_when_a_string_is_involved() {
+    // "foo" + "bar" = "foobar"
+    let mut both = ChunkBuilder::new();
+    both
+      .push_value(Value::GuppyString("foo".to_string()))
+      .push_value(Value::GuppyString("bar".to_string()))
+      .op(OpCode::Add);
+    assert_string(top(&run_stack(both.finish())), "foobar");
+
+    // "n=" + 5 = "n=5" (the number is coerced to text)
+    let mut mixed = ChunkBuilder::new();
+    mixed
+      .push_value(Value::GuppyString("n=".to_string()))
+      .push_value(Value::GuppyNumber(5))
+      .op(OpCode::Add);
+    assert_string(top(&run_stack(mixed.finish())), "n=5");
+  }
+
+  #[test]
+  fn boolean_and_nil_literals_land_on_the_stack() {
+    let mut b = ChunkBuilder::new();
+    b.op(OpCode::True).op(OpCode::False).op(OpCode::Nil);
+    let stack = run_stack(b.finish());
+    assert_eq!(stack.len(), 3);
+    assert_bool(&stack[0], true);
+    assert_bool(&stack[1], false);
+    assert!(matches!(stack[2], Value::Nothing));
+  }
+
+  #[test]
+  fn builds_an_array_and_reads_an_index() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(10))
+      .push_value(Value::GuppyNumber(20))
+      .push_value(Value::GuppyNumber(30))
+      .op_byte(OpCode::MakeArray, 3)
+      .push_value(Value::GuppyNumber(1))
+      .op(OpCode::GetIndex);
+    // [10, 20, 30][1] == 20
+    assert_number(top(&run_stack(b.finish())), 20);
+  }
+
+  #[test]
+  fn array_length_counts_items() {
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(7))
+      .push_value(Value::GuppyNumber(8))
+      .push_value(Value::GuppyNumber(9))
+      .op_byte(OpCode::MakeArray, 3)
+      .op(OpCode::ArrayLen);
+    assert_number(top(&run_stack(b.finish())), 3);
+  }
+
+  #[test]
+  fn build_range_counts_up_and_down() {
+    // 1 through 4 -> [1, 2, 3, 4]
+    let mut up = ChunkBuilder::new();
+    up.push_value(Value::GuppyNumber(1))
+      .push_value(Value::GuppyNumber(4))
+      .op(OpCode::BuildRange);
+    assert_eq!(
+      top(&run_stack(up.finish())).to_display_string(),
+      "[1, 2, 3, 4]"
+    );
+
+    // 3 through 1 -> [3, 2, 1] (ranges can walk backwards too)
+    let mut down = ChunkBuilder::new();
+    down
+      .push_value(Value::GuppyNumber(3))
+      .push_value(Value::GuppyNumber(1))
+      .op(OpCode::BuildRange);
+    assert_eq!(
+      top(&run_stack(down.finish())).to_display_string(),
+      "[3, 2, 1]"
+    );
+  }
+
+  #[test]
+  fn define_and_read_a_global() {
+    let mut b = ChunkBuilder::new();
+    let name = b.string_constant("score");
+    b.push_value(Value::GuppyNumber(7))
+      .op_byte(OpCode::DefineGlobal, name)
+      .op_byte(OpCode::GetGlobal, name);
+    let vm = run_vm(b.finish());
+    // GetGlobal pushed the value back onto the stack...
+    assert_number(top(&vm.stack), 7);
+    // ...and it really lives in the globals cupboard.
+    assert_number(vm.globals.get("score").expect("global should exist"), 7);
+  }
+
+  #[test]
+  fn jump_skips_instructions() {
+    // push 1, jump over "push 2", push 3  =>  stack ends up [1, 3]
+    let mut b = ChunkBuilder::new();
+    b.push_value(Value::GuppyNumber(1))
+      .op_u16(OpCode::Jump, 2) // skip the next Constant (opcode + index = 2 bytes)
+      .push_value(Value::GuppyNumber(2))
+      .push_value(Value::GuppyNumber(3));
+    let stack = run_stack(b.finish());
+    assert_eq!(stack.len(), 2);
+    assert_number(&stack[0], 1);
+    assert_number(&stack[1], 3);
+  }
+
+  #[test]
+  fn jump_if_false_only_jumps_when_falsy() {
+    // condition is false -> jump over "push 100" and land on "push 200"
+    let mut taken = ChunkBuilder::new();
+    taken
+      .op(OpCode::False)
+      .op_u16(OpCode::JumpIfFalse, 2)
+      .push_value(Value::GuppyNumber(100))
+      .push_value(Value::GuppyNumber(200));
+    let stack = run_stack(taken.finish());
+    // JumpIfFalse peeks at the condition (it does not pop it), so `false`
+    // is still sitting underneath the result.
+    assert_eq!(stack.len(), 2);
+    assert_bool(&stack[0], false);
+    assert_number(&stack[1], 200);
+
+    // condition is true -> no jump, so "push 100" runs as normal
+    let mut fell_through = ChunkBuilder::new();
+    fell_through
+      .op(OpCode::True)
+      .op_u16(OpCode::JumpIfFalse, 2)
+      .push_value(Value::GuppyNumber(100));
+    let stack = run_stack(fell_through.finish());
+    assert_eq!(stack.len(), 2);
+    assert_bool(&stack[0], true);
+    assert_number(&stack[1], 100);
+  }
+}
