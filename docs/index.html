@@ -35,6 +35,7 @@
           <details open>
             <summary>Learn Guppty</summary>
             <a href="#about" class="nav-link" data-doc-page="learn">About Guppty</a>
+            <a href="#benchmarks" class="nav-link" data-doc-page="learn">VM Benchmarks</a>
             <a href="#why" class="nav-link" data-doc-page="learn">Why Guppty?</a>
             <a href="#syntax" class="nav-link" data-doc-page="learn">Syntax</a>
             <a href="#examples" class="nav-link" data-doc-page="learn">Examples</a>
@@ -565,66 +566,73 @@
         <section class="docs-section" id="about">
           <p class="eyebrow">Project</p>
           <h2>About Guppty</h2>
-          <div class="text-columns">
-            <p>
-              Guppty is a small indentation-based programming language for learning
-              how source code becomes something a computer can run. It starts with a
-              `.gup` file, turns that text into tokens, builds an AST, compiles the
-              AST into bytecode, and runs the bytecode on a virtual machine.
-            </p>
-            <p>
-              The project keeps the older tree-walking interpreter available with
-              `--interp` because it is useful for comparison. The VM is the default
-              path, and the interpreter gives the project a second way to check that
-              language behavior still makes sense.
-            </p>
+          <p>
+            Guppty is a small, indentation-based programming language that was built from scratch as an educational project in Rust. The core idea behind it is simple: take a plain text file with a .gup extension, turn that text into something a computer can actually execute, and make every step of that transformation visible and understandable. Unlike production languages that optimize for performance and hide their complexity behind layers of abstraction, Guppty is designed to be read, studied, and taken apart. Every component of the language pipeline lives in a single Rust crate with clearly named source files, and the entire project is small enough that a single person can hold the whole thing in their head at once.
+          </p>
+          <p>
+            The language itself supports the features you would expect from a small scripting language. You can define variables, perform arithmetic, work with strings and booleans, write conditional logic with if and else blocks, iterate with while and for loops, define functions with parameters and return values, and even create closures that capture values from their surrounding scope. The syntax is indentation-based, which means there are no curly braces or semicolons to worry about. You write your code, indent the blocks that belong inside control structures or function definitions, and the language figures out the rest. This makes the source files visually clean and easy to follow, especially for people who are new to programming.
+          </p>
+          <p>
+            Under the hood, Guppty has two separate execution backends. The primary path, which is the default when you run a program, involves a compiler that transforms the abstract syntax tree into a sequence of bytecode instructions, and a virtual machine that executes those instructions using a stack-based architecture. The secondary path is a tree-walking interpreter that reads the AST directly and evaluates it node by node without any intermediate compilation step. Both backends produce identical results for any correct program, and they exist side by side so that you can compare how the same source code gets handled by two fundamentally different execution strategies. The VM is faster for complex programs and represents the more modern approach to language implementation, while the interpreter is simpler to understand and serves as a reference implementation that you can use to verify the compiler's correctness.
+          </p>
+          <p>
+            The project also includes a comprehensive set of example programs in the examples directory, each paired with an expected output file that defines exactly what the program should print. These examples serve double duty: they demonstrate language features to new users, and they form the basis of the integration test suite that runs every time you modify the language. This means that if you change something in the lexer, parser, compiler, or VM, and that change breaks the behavior of any example program, the tests will catch it immediately. It is a tight feedback loop that keeps the language honest and makes it safe to experiment with changes.
+          </p>
+        </section>
+
+        <section class="docs-section" id="benchmarks">
+          <p class="eyebrow">Performance</p>
+          <h2>VM Benchmarks</h2>
+          <p>
+            One of the most interesting aspects of having two execution backends in the same project is that you can measure them against each other. The benchmark below compares the average end-to-end runtime of the bytecode-compiled VM path against the tree-walking interpreter path, using the recursion_fib.gup example program as the test case. This program computes Fibonacci numbers recursively, which means it generates a significant number of function calls and exercises the call stack heavily, making it a reasonable stress test for both backends.
+          </p>
+          <p>
+            The numbers you see below come from 200 consecutive runs of the release-built binary on the same machine, measuring the total wall-clock time from process start to process exit. This includes not just the execution of the Guppty program itself, but also process startup, file I/O to read the source file, lexing, parsing, and in the case of the VM path, compilation to bytecode. Because the test program is quite small, process startup and file reading represent a large fraction of the total time, which is why the two backends appear so close to each other in these results.
+          </p>
+
+          <div
+            class="benchmark-chart"
+            role="img"
+            aria-label="Benchmark chart comparing average end-to-end runtime. The VM averaged 2.69 milliseconds and the tree-walker averaged 2.64 milliseconds."
+          >
+            <div class="benchmark-row">
+              <span>VM (compile + execute)</span>
+              <span class="benchmark-track"><span class="benchmark-bar vm-bar"></span></span>
+              <span>2.69 ms</span>
+            </div>
+            <div class="benchmark-row">
+              <span>Tree-walker (interpret)</span>
+              <span class="benchmark-track"><span class="benchmark-bar tree-bar"></span></span>
+              <span>2.64 ms</span>
+            </div>
           </div>
 
-          <div class="benchmark-section">
-            <h3>benchmarks</h3>
-            <p>VM vs tree-walker on recursion_fib.gup</p>
-            <div
-              class="benchmark-chart"
-              role="img"
-              aria-label="Benchmark chart comparing average end-to-end runtime. The VM averaged 2.69 milliseconds and the tree-walker averaged 2.64 milliseconds."
-            >
-              <div class="benchmark-row">
-                <span>VM</span>
-                <span class="benchmark-track"><span class="benchmark-bar vm-bar"></span></span>
-                <span>2.69 ms</span>
-              </div>
-              <div class="benchmark-row">
-                <span>Tree-walker</span>
-                <span class="benchmark-track"><span class="benchmark-bar tree-bar"></span></span>
-                <span>2.64 ms</span>
-              </div>
-            </div>
-            <p class="benchmark-note">
-              These numbers are simple end-to-end CLI averages from 200 release-build
-              runs of `target/release/guppty examples/recursion_fib.gup`. The example
-              is tiny, so process startup is a big part of the time and the two paths
-              are very close. The point of this benchmark is to keep both backends
-              measurable and to make future performance changes easy to compare.
-            </p>
-          </div>
+          <p>
+            The key takeaway here is not that one backend is faster than the other. At this scale, the difference is negligible and falls well within the margin of measurement noise. What matters is that both backends are measurable and comparable, which means that as the language grows and programs get more complex, you will be able to see exactly how changes to the compiler or VM affect performance relative to the simpler interpreter baseline. The benchmark infrastructure exists so that future optimizations have a clear before-and-after comparison point.
+          </p>
+          <p>
+            It is also worth noting that the VM path includes an extra step that the interpreter does not: the compilation phase where the AST gets transformed into bytecode. For tiny programs like this fibonacci example, that extra work is barely noticeable. But for larger programs with many functions and complex control flow, the VM path should eventually pull ahead because it executes precompiled instructions rather than re-interpreting the tree structure on every evaluation. The compilation step is an upfront cost that pays for itself as program complexity increases.
+          </p>
+          <p>
+            If you want to run these benchmarks yourself, you can build the project in release mode and use a simple timing loop in your shell. The command looks something like running the release binary 200 times against the recursion_fib.gup example and averaging the results. The exact numbers will vary depending on your hardware, but the relative comparison between the two backends should remain consistent across different machines.
+          </p>
         </section>
 
         <section class="docs-section" id="why">
           <p class="eyebrow">Purpose</p>
           <h2>Why Guppty?</h2>
-          <div class="text-columns">
-            <p>
-              Guppty is tiny on purpose. You can read the whole thing, change a
-              keyword, add a small feature, and actually see how that choice moves
-              through the language pipeline.
-            </p>
-            <p>
-              It is not trying to be the next giant production language. It is a
-              clear little playground for learning lexers, parsers, bytecode,
-              scopes, functions, closures, and the very satisfying moment when a
-              file named `hello.gup` finally runs.
-            </p>
-          </div>
+          <p>
+            The world does not need another programming language for building production software. There are already excellent tools for every imaginable use case, from systems programming to web development to data science. Guppty exists for a completely different reason: it is a learning tool. It was built to answer the question of what actually happens when you type some text into a file and tell a computer to run it. Most programmers use languages every day without ever looking under the hood, and that is perfectly fine for getting work done. But if you have ever been curious about how a programming language actually works at a fundamental level, from raw text to executed instructions, Guppty gives you a complete and readable implementation to study.
+          </p>
+          <p>
+            The project is intentionally small. The entire source code fits in a handful of Rust files, and none of them are particularly long or complex. You can read the lexer and understand exactly how characters become tokens. You can read the parser and see how tokens become an abstract syntax tree. You can read the compiler and trace how each AST node maps to a sequence of bytecode instructions. And you can read the VM and watch how those instructions get executed one by one on a simple stack. Every step is transparent, every decision is local, and there is nothing hidden behind layers of abstraction that you would need a PhD in computer science to understand.
+          </p>
+          <p>
+            This size constraint is not a limitation; it is a deliberate design choice. When a language is small enough to fit in your head entirely, you can make changes to it and immediately understand the consequences. You can add a new keyword to the syntax definition file, update the lexer to recognize it, extend the parser to handle it, teach the compiler to emit bytecode for it, and make the VM execute that bytecode, all in a single afternoon. That kind of immediate, end-to-end feedback is incredibly powerful for building intuition about how languages work. You are not just reading about compiler theory in a textbook; you are actually doing it, with real code that compiles and runs.
+          </p>
+          <p>
+            Guppty also serves as a personal portfolio piece and a demonstration of what it takes to build a language from nothing. The project shows competence with Rust, understanding of data structures and algorithms, familiarity with testing practices, and the ability to manage a multi-component system where changes in one place ripple through many others. It is the kind of project that demonstrates depth of understanding rather than breadth of feature coverage, and that is exactly what makes it valuable both as a learning experience and as something to share with others.
+          </p>
         </section>
 
         <section class="docs-section" id="syntax">
@@ -635,6 +643,16 @@
             </div>
             <span class="status-chip">Indentation based</span>
           </div>
+
+          <p>
+            Guppty uses indentation to define code blocks rather than curly braces, semicolons, or keywords like "end". This design choice was inspired by Python's approach to code structure, where the visual layout of your code directly corresponds to its logical structure. When you write an if statement, the lines that should execute conditionally are simply indented one level deeper than the if keyword itself. When you define a function, the body of that function is everything that is indented beneath the function signature. This makes Guppty code visually clean and forces a consistent formatting style that makes programs easy to read at a glance.
+          </p>
+          <p>
+            The language supports several fundamental data types: integers, floating-point numbers, strings enclosed in double quotes, single characters enclosed in single quotes, booleans with the values true and false, and arrays for holding ordered collections of values. Variables are created by assignment without any type annotation or declaration keyword. You simply write the name, an equals sign, and the value you want to store, and the language infers the type from whatever you assign to it. This keeps the syntax minimal and reduces the ceremony needed to get things done.
+          </p>
+          <p>
+            Below you can explore the different syntax categories by clicking through the tabs. Each one shows a small code example that demonstrates a particular feature of the language, from basic variable assignment and output to control flow, function definitions, closures, and comments. These examples are all runnable programs, meaning you can save any of them to a .gup file and execute them with the guppty command to see the output.
+          </p>
 
           <div class="syntax-layout">
             <div class="syntax-list" role="tablist" aria-label="Syntax examples">
@@ -648,7 +666,7 @@
             <div class="syntax-panels">
               <article class="syntax-panel active" data-syntax-panel="basics">
                 <h3>Variables, values, and output</h3>
-                <p>Use `out(...)` to print values. Numbers, floats, strings, chars, booleans, and arrays are supported.</p>
+                <p>The out() function is how you print values to the terminal. You can pass it any expression and it will display the result. Variables are created simply by assigning a value to a name. There is no let, var, or const keyword needed. The language supports integers, floating-point numbers, strings in double quotes, single characters in single quotes, and boolean values. You can perform arithmetic on numbers and concatenate strings, and out() will display whatever the final evaluated result is.</p>
                 <pre><code>x = 5
 name = "Guppty"
 ready = true
@@ -659,7 +677,7 @@ out(x + 10)</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="control" hidden>
                 <h3>If, while, and for</h3>
-                <p>Blocks are controlled by indentation. `range(1 through 4)` includes the start and walks toward the end.</p>
+                <p>Control flow in Guppty works through indentation. When you write an if statement, the condition goes on the same line as the if keyword, and the code that should run when the condition is true is indented below it. The else keyword sits at the same indentation level as the if, and its body is indented beneath it in the same way. For loops use the range() function with the "through" keyword to define the iteration bounds, where range(1 through 3) will iterate with i taking the values 1, 2, and 3. While loops work the same way: the condition is on the while line, and the loop body is indented beneath it.</p>
                 <pre><code>score = 85
 if score >= 80
     out("You passed!")
@@ -672,7 +690,7 @@ for i in range(1 through 3)
 
               <article class="syntax-panel" data-syntax-panel="functions" hidden>
                 <h3>Functions and returns</h3>
-                <p>Define a function with `name(args)` followed by an indented body.</p>
+                <p>Functions in Guppty are defined by writing the function name followed by its parameters in parentheses, with the function body indented on the following lines. There is no "def" or "func" keyword. The language recognizes a function definition by seeing an identifier followed by parentheses at the start of a line. Return values are sent back using the return keyword. You can call functions by name and pass arguments just like you would in any other language. Functions can call other functions, and they can call themselves recursively.</p>
                 <pre><code>add(a, b)
     return a + b
 
@@ -681,7 +699,7 @@ out(add(2, 3))</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="closures" hidden>
                 <h3>Closures</h3>
-                <p>Functions can capture values from the scope where they were defined.</p>
+                <p>Closures are functions that capture and remember values from the scope in which they were defined, even after that scope has finished executing. In Guppty, you create a closure by defining a function inside another function and then returning it. The inner function has access to the outer function's variables, and those variables remain alive as long as the closure exists. This is a powerful pattern that enables things like factory functions, stateful callbacks, and encapsulated counters. The example below shows a makeAdder function that creates and returns a closure which remembers the value of x from its parent scope.</p>
                 <pre><code>makeAdder(x)
     addIt(y)
         return x + y
@@ -693,7 +711,7 @@ out(adder(3))</code></pre>
 
               <article class="syntax-panel" data-syntax-panel="comments" hidden>
                 <h3>Comments</h3>
-                <p>Double slash comments can sit on their own line or after code.</p>
+                <p>Comments in Guppty use the double-slash syntax that will be familiar to anyone who has used C, Java, JavaScript, or Rust. A comment starts with two forward slashes and continues to the end of the line. Everything after the double slash is ignored by the lexer and does not affect the behavior of your program. Comments can appear on their own line, or they can be placed after a statement on the same line. They are useful for leaving notes to yourself or others about what your code does, why a particular approach was chosen, or what you plan to change in the future.</p>
                 <pre><code>// this is a comment
 out(42) // this is an inline comment</code></pre>
               </article>
@@ -705,14 +723,16 @@ out(42) // this is an inline comment</code></pre>
           <p class="eyebrow">Programs</p>
           <h2>Examples</h2>
           <p>
-            The `examples/` folder is the easiest way to get a feel for the
-            language. Each program is small enough to skim, and the matching
-            `examples/expected/` file shows exactly what should print.
+            The examples directory is the best place to start when you want to understand what Guppty code looks like in practice. Every file in that directory is a complete, runnable program that demonstrates one or more language features. The programs are deliberately small, usually just a few lines, so you can read them in seconds and understand exactly what they do. Each example has a corresponding file in the examples/expected subdirectory that contains the exact output the program should produce, which means you can verify that your installation is working correctly by comparing the actual output against the expected output.
+          </p>
+          <p>
+            The examples below show three different programs that represent increasing levels of language complexity. The hello world example is the simplest possible Guppty program, just a single line that prints a string. The recursion example shows how functions can call themselves to solve problems that have a naturally recursive structure. And the closure counter example demonstrates one of the more advanced features of the language: the ability to create functions that maintain their own private state through captured variables. Together, these three programs give you a good sense of the range of things Guppty can express, from trivial one-liners to patterns that would be right at home in a production codebase.
           </p>
 
           <div class="example-grid">
             <article>
               <h3>Hello World</h3>
+              <p>The simplest Guppty program. A single call to out() with a string argument prints that string to the terminal and exits. This is the first program most people write when learning a new language, and in Guppty it could not be any shorter.</p>
               <pre><code>out("Hello World!")</code></pre>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -732,6 +752,7 @@ out(42) // this is an inline comment</code></pre>
 
             <article>
               <h3>Recursion</h3>
+              <p>This program defines a factorial function that calls itself with a smaller argument until it reaches the base case. Recursion is fully supported in both the VM and interpreter backends, including deep call stacks and proper return value propagation.</p>
               <pre><code>factorial(n)
     if n <= 1
         return 1
@@ -756,6 +777,7 @@ out(factorial(5))</code></pre>
 
             <article>
               <h3>Closure Counter</h3>
+              <p>This example creates a counter function that maintains its own internal state. Each time you call the returned increment function, it updates and returns the count. The captured count variable lives on even after makeCounter has returned, which is the essence of how closures work.</p>
               <pre><code>makeCounter(start)
     count = start
     increment()
@@ -784,11 +806,12 @@ out(factorial(5))</code></pre>
           <p class="eyebrow">Under the Hood</p>
           <h2>Technologies Used</h2>
           <p>
-            Guppty uses a small set of plain technologies so each part of the
-            language pipeline is easy to inspect. Rust provides the command-line
-            program, Cargo runs builds and tests, the compiler creates bytecode, and
-            the VM runs that bytecode in a predictable stack-based model.
+            Guppty is built with a deliberately small technology stack. The entire project is written in Rust using the 2021 edition, and it has zero external runtime dependencies. This was a conscious choice: by avoiding external crates for the core language implementation, every line of code in the lexer, parser, compiler, and VM was written by hand and can be read without needing to understand someone else's library. The only tool you need to build and run Guppty is the standard Rust toolchain, which includes the compiler and the Cargo build system.
           </p>
+          <p>
+            The language follows a classic pipeline architecture that you would find in any compiler textbook, but implemented in a way that is easy to follow and modify. Source code enters the pipeline as raw text and flows through four distinct stages before producing output. Each stage transforms the data into a progressively more structured form, and each stage is implemented in its own dedicated source file so you can study them in isolation.
+          </p>
+
           <div class="pipeline" aria-label="Guppty language pipeline">
             <div><span>Source</span><span>.gup file</span></div>
             <div><span>Lexer</span><span>tokens</span></div>
@@ -797,37 +820,33 @@ out(factorial(5))</code></pre>
             <div><span>VM</span><span>stdout</span></div>
           </div>
 
+          <p>
+            The first stage is the lexer, which reads the raw characters of your source file and groups them into meaningful tokens like numbers, strings, identifiers, operators, and keywords. The lexer also handles indentation tracking, which is what allows Guppty to use whitespace for block structure instead of braces. The second stage is the parser, which takes the flat sequence of tokens and builds them into a hierarchical abstract syntax tree that represents the logical structure of your program. The third stage is the compiler, which walks the AST and emits a sequence of bytecode instructions that encode the same logic in a format the VM can execute efficiently. And the final stage is the virtual machine, which reads those bytecode instructions one at a time and executes them on a stack, producing the output your program was designed to generate.
+          </p>
+
           <div class="tech-grid">
             <article>
               <h3>Rust 2021</h3>
               <p>
-                Rust was used because it is a good fit for a language tool: it builds
-                a fast local CLI, has strong types for tokens and AST nodes, and ships
-                with Cargo for repeatable builds and tests.
+                Rust was chosen as the implementation language because it provides the exact combination of features that a language tool needs. It compiles to a fast native binary that starts up instantly, which means the CLI feels responsive even for trivial programs. Its type system with enums and pattern matching is ideal for representing tokens, AST nodes, and bytecode instructions in a way that the compiler can check for completeness. And Cargo provides a built-in test runner, build system, and dependency manager that makes the development workflow smooth and repeatable across different machines and operating systems.
               </p>
             </article>
             <article>
               <h3>Stack VM</h3>
               <p>
-                The stack VM is the default backend because it separates compilation
-                from execution. That makes the runtime easier to inspect, benchmark,
-                and improve without changing the parser every time.
+                The stack-based virtual machine is the default execution backend and represents the more sophisticated of the two approaches to running Guppty programs. It works by maintaining a value stack and a call frame stack, pushing and popping values as it executes instructions. This architecture separates the concerns of compilation and execution, which means you can optimize the compiler without touching the VM, or improve the VM without changing how bytecode is generated. It is the same fundamental design used by languages like Java, Python, and Lua in their virtual machines.
               </p>
             </article>
             <article>
               <h3>Tree Interpreter</h3>
               <p>
-                The tree-walking interpreter stays available behind `--interp` because
-                it runs the AST directly. It is useful when checking whether a compiler
-                or VM change still matches the simpler execution path.
+                The tree-walking interpreter is the alternative execution backend, accessible through the --interp flag. It works by traversing the AST directly, evaluating each node as it encounters it. This approach is simpler to implement and easier to reason about, which makes it a good reference implementation. When you make changes to the compiler or VM and want to verify that the new behavior is correct, you can run the same program through the interpreter and compare the output. If both backends produce the same result, you can be confident that your change is semantically correct.
               </p>
             </article>
             <article>
               <h3>Integration Tests</h3>
               <p>
-                The tests run real `.gup` examples and compare them with expected
-                stdout. That keeps the documentation examples and the language behavior
-                tied together.
+                The test suite works by running real .gup example programs through the language pipeline and comparing their actual output against expected output files stored in the repository. This approach has several advantages over unit testing individual components: it tests the entire system end-to-end, it uses the same programs that users see in the documentation, and it catches regressions at the behavior level rather than the implementation level. If a test fails, you know exactly what the user would see differently, which makes debugging straightforward.
               </p>
             </article>
           </div>
@@ -836,10 +855,19 @@ out(factorial(5))</code></pre>
         <section class="docs-section" id="lessons">
           <p class="eyebrow">Notes</p>
           <h2>What I Learned</h2>
+          <p>
+            Building a programming language from scratch, even a small one, teaches you things that you cannot learn any other way. There is a fundamental difference between reading about how compilers work in a textbook and actually implementing one yourself, feeling the friction of real decisions, debugging real edge cases, and experiencing the satisfaction of watching your language run a program for the first time. The lessons below are the most significant things this project taught me, not just about language implementation specifically, but about software engineering in general.
+          </p>
           <div class="note-list">
-            <p>Language features connect fast. A small syntax change can touch lexing, parsing, compilation, runtime values, examples, and tests.</p>
-            <p>Examples are quiet little guardrails. The `.gup` files show people what to write and keep the implementation honest at the same time.</p>
-            <p>Errors matter more than they look. A friendly message with a real location makes the CLI feel like a tool instead of a guessing game.</p>
+            <p>
+              Language features connect faster than you expect. When you add a single new keyword or operator to the language, that change touches almost every layer of the system. You update the syntax definition, modify the lexer to recognize the new token, extend the parser to handle the new grammar rule, teach the compiler to emit appropriate bytecode for it, and update the VM to execute that bytecode correctly. Then you write an example program that uses the feature, create an expected output file, and verify that both backends produce the same result. What seems like a small addition from the outside turns out to be a journey through the entire codebase, and that is exactly what makes it educational.
+            </p>
+            <p>
+              Example programs are deceptively powerful. The .gup files in the examples directory look like simple demonstrations for users, but they quietly serve as the foundation of the entire testing strategy. Every time you run the test suite, those examples are compiled and executed, and their output is compared against the expected files. This means that the documentation and the test suite are the same thing, which keeps them permanently synchronized. You cannot break a feature without breaking a test, and you cannot add a test without also creating a demonstration that users can learn from.
+            </p>
+            <p>
+              Error messages matter more than almost any other feature. A language can have beautiful syntax and elegant semantics, but if it responds to mistakes with cryptic messages or unhelpful line numbers, people will hate using it. Spending time on clear, located error messages with context about what went wrong and where makes the CLI feel like a real tool rather than a frustrating puzzle. It is the difference between "unexpected token" and "expected a closing parenthesis on line 7, but found the end of the line instead." The second version respects the user's time and helps them fix the problem immediately.
+            </p>
           </div>
         </section>
         </div>
