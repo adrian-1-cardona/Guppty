@@ -755,7 +755,7 @@ mod tests {
       Rc::new(RefCell::new(CompiledFunction {
         name: "<test>".to_string(),
         arity: 0,
-        chunk: std::mem::replace(&mut self.chunk, Chunk::new()),
+        chunk: std::mem::take(&mut self.chunk),
         upvalues: Vec::new(),
         local_names: Vec::new(),
       }))
