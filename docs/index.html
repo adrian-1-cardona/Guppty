@@ -62,19 +62,24 @@
           <p class="eyebrow">Version 0.1.0</p>
           <h1>Installation Guide</h1>
           <p class="hero-copy">
-            Guppty is a small indentation-based programming language written in Rust.
-            The setup is plain on purpose: install Rust, grab the repo, install the
-            local command, and run a `.gup` file from your terminal.
+            Guppty is a small, indentation-based programming language written entirely in Rust. It was designed from the ground up as a learning tool, something you can install in a few minutes and immediately start experimenting with. The language compiles your source files into bytecode and runs them on a lightweight virtual machine, which means you get to see every stage of the pipeline from raw text to actual execution without needing any external dependencies beyond the Rust toolchain itself.
+          </p>
+          <p class="hero-copy">
+            The installation process is intentionally straightforward. There is no package manager to configure, no complex build system to fight with, and no hidden environment variables to set. You install Rust, you clone the repository, you run a single Cargo command, and then you have a working command-line tool that can execute any file ending in the .gup extension. The whole thing takes about two minutes on a modern internet connection, and at the end of it you will have a fully functional programming language sitting on your machine, ready to run.
           </p>
 
           <div class="quick-install" aria-label="Quick installation commands">
             <div class="section-heading">
               <div>
                 <h2>Quick Installation</h2>
-                <p>For macOS, Linux, and Windows.</p>
+                <p>For macOS, Linux, and Windows</p>
               </div>
               <div class="status-chip">Rust + Cargo</div>
             </div>
+
+            <p>
+              The installation steps below will guide you through setting up Guppty on your system regardless of which operating system you are running. The process is nearly identical across all three platforms because Rust and Cargo handle the cross-platform compilation details for you. The only real difference is how you initially install the Rust toolchain itself. On macOS and Linux, you use the official rustup installer script. On Windows, you can use winget or download the installer directly from the Rust website. Once Rust is in place, every other step is exactly the same no matter what machine you are sitting in front of.
+            </p>
 
             <div class="tabs" role="tablist" aria-label="Operating system install commands">
               <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="mac-panel" data-tab="mac">macOS</button>
@@ -85,7 +90,7 @@
             <div class="tab-panel active" id="mac-panel" role="tabpanel" data-panel="mac">
               <ol class="install-list">
                 <li>
-                  <p>Install Rust if `cargo` is not on your machine yet.</p>
+                  <p>First, you need to install the Rust programming language on your Mac. If you have never used Rust before, this command downloads the official rustup installer, which sets up the Rust compiler, the Cargo package manager, and all the standard tools you need. The script is safe to run and will ask you to confirm before making any changes to your system. Once it finishes, you will need to restart your terminal or run the source command it suggests so that the new commands become available in your current shell session.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -102,7 +107,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Download the Guppty source code.</p>
+                  <p>Next, download the entire Guppty source code from GitHub. This command creates a new folder called Guppty in whatever directory you are currently in, and it pulls down every file in the project including the source code, the example programs, the test suite, and this documentation site. You will need git installed on your machine for this to work, but most Macs come with git preinstalled through the Xcode command line tools.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -119,7 +124,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Move into the project folder.</p>
+                  <p>Move into the project folder that was just created by the clone command. Everything from this point forward needs to happen inside this directory because Cargo looks for the Cargo.toml file to understand how to build the project.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -136,7 +141,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the local `guppty` command.</p>
+                  <p>Now install the guppty command-line tool. This command tells Cargo to compile the project in release mode and place the resulting binary into your Cargo bin directory, which is typically located at ~/.cargo/bin. After this completes, you will be able to type guppty from anywhere on your system and it will work, because Cargo's bin directory should already be on your PATH from when you installed Rust in the first step.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -153,7 +158,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the sample program and make sure it talks back.</p>
+                  <p>Finally, run one of the included example programs to confirm that everything is working correctly. The program.gup file is a small demonstration that exercises several language features at once. If you see output printed to your terminal without any error messages, your installation is complete and Guppty is ready to use.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -175,7 +180,7 @@
             <div class="tab-panel" id="linux-panel" role="tabpanel" data-panel="linux" hidden>
               <ol class="install-list">
                 <li>
-                  <p>Install Rust if you do not already have it.</p>
+                  <p>Start by installing Rust on your Linux machine. The rustup installer works on virtually every distribution and will set up the compiler, Cargo, and all the standard Rust tooling. If you are on a system that does not have curl installed, you can install it first through your distribution's package manager. After the installer finishes, restart your shell or source the environment file it points you to.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -192,7 +197,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Clone the repository.</p>
+                  <p>Clone the Guppty repository from GitHub. This pulls down the entire project including all source files, example programs, expected output files, and the documentation. You will need git installed, which most Linux distributions include by default or make available through their package manager.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -209,7 +214,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Step into the new folder.</p>
+                  <p>Change into the newly created project directory. All the build commands expect to be run from the root of the repository where the Cargo.toml configuration file lives.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -226,7 +231,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the command from this checkout.</p>
+                  <p>Install the guppty binary from this local checkout. Cargo compiles the project and places the resulting executable in ~/.cargo/bin, which should already be on your PATH from the Rust installation. The compilation will take a moment the first time as it downloads and compiles all dependencies.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -243,7 +248,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the example program.</p>
+                  <p>Run the example program to verify that your installation is working. If text appears in your terminal without errors, everything is set up correctly and you can start writing your own .gup files.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -265,7 +270,7 @@
             <div class="tab-panel" id="windows-panel" role="tabpanel" data-panel="windows" hidden>
               <ol class="install-list">
                 <li>
-                  <p>Install Rust with winget, then reopen your terminal.</p>
+                  <p>Install the Rust toolchain on Windows using winget, which is the built-in package manager available on Windows 10 and later. This command downloads and installs rustup, which in turn installs the Rust compiler and Cargo. After the installation completes, you need to close and reopen your terminal so that the new PATH entries take effect. If you do not have winget available, you can alternatively download the rustup installer directly from rustup.rs.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -282,7 +287,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Clone the repository.</p>
+                  <p>Clone the Guppty repository. This works the same way on Windows as it does on any other platform. You will need git installed, which you can get through Git for Windows or through winget. The command creates a Guppty folder in your current directory containing all the project files.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -299,7 +304,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Move into the project folder.</p>
+                  <p>Navigate into the project folder. On Windows you can use either forward slashes or backslashes for this command, both work fine in modern terminals like PowerShell or Windows Terminal.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -316,7 +321,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Install the `guppty` command from the local source.</p>
+                  <p>Install the guppty command from the local source code. Cargo compiles everything and places the executable in your Cargo bin directory, which is usually located at C:\Users\YourName\.cargo\bin. This directory should already be on your system PATH from the Rust installation step.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -333,7 +338,7 @@
                   </div>
                 </li>
                 <li>
-                  <p>Run the sample program.</p>
+                  <p>Test the installation by running one of the included example programs. Note that on Windows you use backslashes for file paths. If the program produces output without any error messages, you are all set and ready to start using Guppty.</p>
                   <div class="terminal-panel command-terminal">
                     <div class="terminal-top" aria-hidden="true">
                       <span class="dot red"></span>
@@ -363,11 +368,18 @@
             <a class="ghost-link" href="https://rustup.rs" target="_blank" rel="noreferrer">Install Rust</a>
           </div>
 
+          <p>
+            If you have already completed the installation steps above, this section gives you a condensed overview of what you just did and explains the reasoning behind each step in a bit more detail. Think of it as the quick-reference version that you can come back to later when you want to remember the workflow without reading through all the explanations again. The four steps below represent the complete lifecycle of getting Guppty from nothing to running on your machine.
+          </p>
+          <p>
+            The first thing to understand is that Guppty is not distributed as a prebuilt binary yet. You are compiling it yourself from source code, which means you need the Rust compiler and its build tool, Cargo. This is actually a benefit because it means you can look at and modify any part of the language whenever you want. You are not just a user of Guppty, you have the entire implementation sitting right there on your machine, fully transparent and ready to be explored or changed.
+          </p>
+
           <div class="steps">
             <article class="step-card">
               <span class="step-number">1</span>
               <h3>Install the Rust toolchain</h3>
-              <p>Guppty is built with Rust 2021. If this prints a version, you are good.</p>
+              <p>Guppty requires the Rust 2021 edition compiler. If the command below prints a version number, you already have Rust installed and can skip ahead to step two. If it says the command is not found, head to rustup.rs and follow the installation instructions for your operating system. The whole process takes about a minute and gives you everything you need to compile Rust programs.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -387,7 +399,7 @@
             <article class="step-card">
               <span class="step-number">2</span>
               <h3>Clone the repository</h3>
-              <p>Pull down the code from GitHub so Cargo can build it locally.</p>
+              <p>Pull down the complete Guppty source code from GitHub. This gives you the compiler, the virtual machine, the interpreter, all the example programs, the test suite, and this documentation. Cargo needs the Cargo.toml file at the root of this repository to understand how to build the project, so make sure you are inside the Guppty directory before running any build commands.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -407,7 +419,7 @@
             <article class="step-card">
               <span class="step-number">3</span>
               <h3>Install the local CLI</h3>
-              <p>Run this inside the Guppty folder. It puts `guppty` on your Cargo path.</p>
+              <p>Run this inside the Guppty folder. It compiles the project in release mode and places the guppty binary into your Cargo bin directory, which should already be on your system PATH. After this step, you can run guppty from any directory on your machine. If you ever want to update to a newer version, just pull the latest changes from GitHub and run this command again.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -427,7 +439,7 @@
             <article class="step-card">
               <span class="step-number">4</span>
               <h3>Run an example</h3>
-              <p>The default backend compiles to bytecode and runs on Guppty's VM.</p>
+              <p>The default execution path compiles your .gup file into bytecode and runs it on Guppty's stack-based virtual machine. The examples folder contains dozens of small programs that demonstrate different language features, from simple hello-world printing to recursive functions and closures. Try running a few of them to get a feel for how the language works before writing your own programs.</p>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
                   <span class="dot red"></span>
@@ -446,16 +458,19 @@
           </div>
         </section>
 
-        <section class="docs-section split-section" id="download">
-          <div>
-            <p class="eyebrow">Download</p>
-            <h2>Get Guppty</h2>
-            <p>
-              Right now, Guppty is happiest when you install it from source. The
-              ZIP is useful if you do not want to clone the repo, and binary
-              downloads can come later once releases are set up.
-            </p>
-          </div>
+        <section class="docs-section" id="download">
+          <p class="eyebrow">Download</p>
+          <h2>Get Guppty</h2>
+          <p>
+            At this point in the project's life, the recommended way to get Guppty is to build it from source. This might sound intimidating if you are used to downloading an installer or a prebuilt binary, but it is genuinely simple because Cargo handles all the heavy lifting for you. You run one command and it compiles everything, resolves dependencies, and produces a working executable. There is nothing to configure and nothing that can go wrong as long as you have Rust installed.
+          </p>
+          <p>
+            That said, there are times when you might want the source code without going through git. Maybe you are on a machine that does not have git installed, or maybe you just want a snapshot of the project to browse offline. For those situations, the ZIP download below gives you the same files you would get from cloning the repository. You can unzip it anywhere, open a terminal in that folder, and run the same cargo install command. The result is identical.
+          </p>
+          <p>
+            Prebuilt binary downloads are planned for the future once the project reaches a stable release cadence. When that happens, you will be able to download a single executable for your platform and skip the compilation step entirely. For now, building from source is the way to go, and it has the added benefit of letting you look at and modify the code whenever you feel curious about how something works.
+          </p>
+
           <div class="download-actions">
             <a class="primary-button" href="https://github.com/adrian-1-cardona/Guppty/archive/refs/heads/main.zip">
               Download source ZIP
@@ -470,16 +485,20 @@
           <p class="eyebrow">Terminal</p>
           <h2>Guppty CLI</h2>
           <p>
-            The CLI wants one thing from you: a `.gup` file. By default it lexes,
-            parses, compiles, and runs that file on the stack-based VM. Add
-            `--interp` when you want to compare the older interpreter.
+            The Guppty command-line interface is designed to be as simple as possible. You give it a file, and it runs that file. There are no subcommands to memorize, no configuration files to write, and no flags you need to remember for everyday use. The entire interface boils down to one pattern: you type guppty followed by the path to a .gup file, and the language does the rest. It lexes the source text into tokens, parses those tokens into an abstract syntax tree, compiles the tree into bytecode instructions, and then executes those instructions on the stack-based virtual machine. All of that happens in milliseconds, and the only thing you see is whatever output your program produces.
+          </p>
+          <p>
+            There is one optional flag worth knowing about. If you pass --interp after the file path, Guppty will skip the compiler and virtual machine entirely and instead run your program using the older tree-walking interpreter. This interpreter reads the AST directly and evaluates it node by node, which is a fundamentally different execution strategy than compiling to bytecode first. The results should be identical for any correct program, but the interpreter is useful when you are debugging language behavior or when you want to compare how the two backends handle a particular edge case. It is also a nice educational tool because it shows you a second way that programming languages can execute code.
+          </p>
+          <p>
+            If you are actively developing Guppty itself and do not want to reinstall the binary every time you make a change, you can use cargo run to execute programs directly from the source tree. This compiles and runs the project in one step, which is faster during development because you skip the install step. The double dash tells Cargo that everything after it is an argument for the program rather than an argument for Cargo itself.
           </p>
 
           <div class="command-grid">
             <article class="command-row">
               <div>
                 <h3>Run with the VM</h3>
-                <p>This is the everyday path.</p>
+                <p>This is the standard execution path that you will use the vast majority of the time. Your source code gets compiled into bytecode and executed on the virtual machine. It is fast, predictable, and produces clean output.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -500,7 +519,7 @@
             <article class="command-row">
               <div>
                 <h3>Run with the interpreter</h3>
-                <p>Nice when you are changing language behavior and want a second read.</p>
+                <p>The tree-walking interpreter is the alternative backend that evaluates your AST directly without compiling to bytecode first. It is useful for comparison, debugging, and understanding how two different execution models can produce the same results from the same source code.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
@@ -521,7 +540,7 @@
             <article class="command-row">
               <div>
                 <h3>Run without installing</h3>
-                <p>Handy when you are working inside the Rust project itself.</p>
+                <p>When you are working on the Guppty source code itself and making frequent changes, this command compiles and runs in one step without needing to reinstall the binary each time. The double dash separates Cargo's own arguments from the arguments that get passed through to the Guppty program.</p>
               </div>
               <div class="terminal-panel command-terminal">
                 <div class="terminal-top" aria-hidden="true">
