@@ -34,6 +34,7 @@
 
           <details open>
             <summary>Learn Guppty</summary>
+            <a href="#about" class="nav-link" data-doc-page="learn">About Guppty</a>
             <a href="#why" class="nav-link" data-doc-page="learn">Why Guppty?</a>
             <a href="#syntax" class="nav-link" data-doc-page="learn">Syntax</a>
             <a href="#examples" class="nav-link" data-doc-page="learn">Examples</a>
@@ -542,6 +543,53 @@
         </div>
 
         <div class="doc-page" data-doc-page-panel="learn" hidden>
+        <section class="docs-section" id="about">
+          <p class="eyebrow">Project</p>
+          <h2>About Guppty</h2>
+          <div class="text-columns">
+            <p>
+              Guppty is a small indentation-based programming language for learning
+              how source code becomes something a computer can run. It starts with a
+              `.gup` file, turns that text into tokens, builds an AST, compiles the
+              AST into bytecode, and runs the bytecode on a virtual machine.
+            </p>
+            <p>
+              The project keeps the older tree-walking interpreter available with
+              `--interp` because it is useful for comparison. The VM is the default
+              path, and the interpreter gives the project a second way to check that
+              language behavior still makes sense.
+            </p>
+          </div>
+
+          <div class="benchmark-section">
+            <h3>benchmarks</h3>
+            <p>VM vs tree-walker on recursion_fib.gup</p>
+            <div
+              class="benchmark-chart"
+              role="img"
+              aria-label="Benchmark chart comparing average end-to-end runtime. The VM averaged 2.69 milliseconds and the tree-walker averaged 2.64 milliseconds."
+            >
+              <div class="benchmark-row">
+                <span>VM</span>
+                <span class="benchmark-track"><span class="benchmark-bar vm-bar"></span></span>
+                <span>2.69 ms</span>
+              </div>
+              <div class="benchmark-row">
+                <span>Tree-walker</span>
+                <span class="benchmark-track"><span class="benchmark-bar tree-bar"></span></span>
+                <span>2.64 ms</span>
+              </div>
+            </div>
+            <p class="benchmark-note">
+              These numbers are simple end-to-end CLI averages from 200 release-build
+              runs of `target/release/guppty examples/recursion_fib.gup`. The example
+              is tiny, so process startup is a big part of the time and the two paths
+              are very close. The point of this benchmark is to keep both backends
+              measurable and to make future performance changes easy to compare.
+            </p>
+          </div>
+        </section>
+
         <section class="docs-section" id="why">
           <p class="eyebrow">Purpose</p>
           <h2>Why Guppty?</h2>
@@ -716,30 +764,52 @@ out(factorial(5))</code></pre>
         <section class="docs-section" id="architecture">
           <p class="eyebrow">Under the Hood</p>
           <h2>Technologies Used</h2>
+          <p>
+            Guppty uses a small set of plain technologies so each part of the
+            language pipeline is easy to inspect. Rust provides the command-line
+            program, Cargo runs builds and tests, the compiler creates bytecode, and
+            the VM runs that bytecode in a predictable stack-based model.
+          </p>
           <div class="pipeline" aria-label="Guppty language pipeline">
-            <div><strong>Source</strong><span>.gup file</span></div>
-            <div><strong>Lexer</strong><span>tokens</span></div>
-            <div><strong>Parser</strong><span>AST</span></div>
-            <div><strong>Compiler</strong><span>bytecode</span></div>
-            <div><strong>VM</strong><span>stdout</span></div>
+            <div><span>Source</span><span>.gup file</span></div>
+            <div><span>Lexer</span><span>tokens</span></div>
+            <div><span>Parser</span><span>AST</span></div>
+            <div><span>Compiler</span><span>bytecode</span></div>
+            <div><span>VM</span><span>stdout</span></div>
           </div>
 
           <div class="tech-grid">
             <article>
               <h3>Rust 2021</h3>
-              <p>Rust and Cargo handle the CLI, tests, and release builds without extra tooling.</p>
+              <p>
+                Rust was used because it is a good fit for a language tool: it builds
+                a fast local CLI, has strong types for tokens and AST nodes, and ships
+                with Cargo for repeatable builds and tests.
+              </p>
             </article>
             <article>
               <h3>Stack VM</h3>
-              <p>The default backend compiles source into bytecode and executes it on a virtual machine.</p>
+              <p>
+                The stack VM is the default backend because it separates compilation
+                from execution. That makes the runtime easier to inspect, benchmark,
+                and improve without changing the parser every time.
+              </p>
             </article>
             <article>
               <h3>Tree Interpreter</h3>
-              <p>The `--interp` flag keeps the older interpreter available for comparison and debugging.</p>
+              <p>
+                The tree-walking interpreter stays available behind `--interp` because
+                it runs the AST directly. It is useful when checking whether a compiler
+                or VM change still matches the simpler execution path.
+              </p>
             </article>
             <article>
               <h3>Integration Tests</h3>
-              <p>Every example program can be run and compared against its expected stdout.</p>
+              <p>
+                The tests run real `.gup` examples and compare them with expected
+                stdout. That keeps the documentation examples and the language behavior
+                tied together.
+              </p>
             </article>
           </div>
         </section>
@@ -748,9 +818,9 @@ out(factorial(5))</code></pre>
           <p class="eyebrow">Notes</p>
           <h2>What I Learned</h2>
           <div class="note-list">
-            <p><strong>Language features connect fast.</strong> A small syntax change can touch lexing, parsing, compilation, runtime values, examples, and tests.</p>
-            <p><strong>Examples are quiet little guardrails.</strong> The `.gup` files show people what to write and keep the implementation honest at the same time.</p>
-            <p><strong>Errors matter more than they look.</strong> A friendly message with a real location makes the CLI feel like a tool instead of a guessing game.</p>
+            <p>Language features connect fast. A small syntax change can touch lexing, parsing, compilation, runtime values, examples, and tests.</p>
+            <p>Examples are quiet little guardrails. The `.gup` files show people what to write and keep the implementation honest at the same time.</p>
+            <p>Errors matter more than they look. A friendly message with a real location makes the CLI feel like a tool instead of a guessing game.</p>
           </div>
         </section>
         </div>
@@ -811,9 +881,9 @@ out(factorial(5))</code></pre>
 
           <ol class="publish-steps">
             <li>Push this repository to GitHub.</li>
-            <li>Open <strong>Settings</strong>, then <strong>Pages</strong>.</li>
-            <li>Set <strong>Source</strong> to <strong>Deploy from a branch</strong>.</li>
-            <li>Choose the branch, usually `main`, and select the <strong>/docs</strong> folder.</li>
+            <li>Open Settings, then Pages.</li>
+            <li>Set Source to Deploy from a branch.</li>
+            <li>Choose the branch, usually `main`, and select the /docs folder.</li>
             <li>Save. GitHub will serve `docs/index.html` as the public documentation page.</li>
           </ol>
 

@@ -604,6 +604,14 @@ p {
   background: #000;
 }
 
+.vm-bar {
+  width: 100%;
+}
+
+.tree-bar {
+  width: 98%;
+}
+
 .benchmark-note {
   max-width: 760px;
   margin-top: 12px;
