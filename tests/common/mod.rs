@@ -1,10 +1,14 @@
 // =============================================================================
 // tests/common/mod.rs
-// =============================================================================
 // Helper toolbox for integration tests.
 // Reads tests/gup_cases.txt so you can change expected output without
 // touching Rust code. Yay!
 // =============================================================================
+
+// Each test file gets its own copy of this toolbox. Some files only use
+// SOME of the tools. That is fine! This line tells Rust "don't nag me about
+// tools I'm not using right now."
+#![allow(dead_code)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -89,13 +93,60 @@ pub fn load_cases() -> Vec<GupCase> {
 }
 
 // -------------------------------------------------------------------------
-// Run a .gup file through the real guppty binary — file in!
+// Guppty can run your code in TWO ways. We call each way a "backend":
+//
+//   * Vm          -> the default, speedy robot. It turns your code into
+//                    tiny step-by-step instructions, then races through them.
+//   * Interpreter -> the older, simpler reader (turned on with --interp).
+//                    It walks over your code tree and does each part directly.
+//
+// Both ways should ALWAYS print the exact same thing. This little enum lets
+// a test say "run it the VM way" or "run it the interpreter way" — like
+// picking the red crayon or the blue crayon to draw the same picture.
+// -------------------------------------------------------------------------
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Backend {
+    Vm,
+    Interpreter,
+}
+
+impl Backend {
+    // A friendly name to show in test messages so a human knows which
+    // way was used when something goes wrong.
+    pub fn name(self) -> &'static str {
+        match self {
+            Backend::Vm => "vm (default)",
+            Backend::Interpreter => "interpreter (--interp)",
+        }
+    }
+
+    // Both backends in a little list, handy for "do this for every way" loops.
+    pub fn all() -> [Backend; 2] {
+        [Backend::Vm, Backend::Interpreter]
+    }
+}
+
+// -------------------------------------------------------------------------
+// Run a .gup file the DEFAULT way (the VM). file in, output out!
 // -------------------------------------------------------------------------
 pub fn run_gup_file(file: &Path) -> (String, String, i32) {
+    run_gup_file_with_backend(file, Backend::Vm)
+}
+
+// -------------------------------------------------------------------------
+// Run a .gup file the way YOU pick.
+// The interpreter needs the extra "--interp" word; the VM needs nothing.
+// -------------------------------------------------------------------------
+pub fn run_gup_file_with_backend(file: &Path, backend: Backend) -> (String, String, i32) {
     let bin = env!("CARGO_BIN_EXE_guppty");
 
-    let output = Command::new(bin)
-        .arg(file)
+    let mut command = Command::new(bin);
+    command.arg(file);
+    if backend == Backend::Interpreter {
+        command.arg("--interp");
+    }
+
+    let output = command
         .output()
         .unwrap_or_else(|e| panic!("failed to run guppty on {}: {}", file.display(), e));
 

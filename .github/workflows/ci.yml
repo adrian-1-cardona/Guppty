@@ -26,5 +26,16 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
+      # -----------------------------------------------------------------------
+      # Dual-backend check: run every example BOTH ways and make sure they
+      # print the same thing. Guppty has two engines — the fast "VM" (the
+      # default) and the simple "interpreter" (turned on with --interp).
+      # The same program MUST behave the same on both. This step is the lock
+      # on that promise, so neither engine can quietly change the rules.
+      # (It is its own step so you can spot it easily in the CI log.)
+      # -----------------------------------------------------------------------
+      - name: Lock semantics — examples must match on VM and --interp
+        run: cargo test --test dual_backend -- --nocapture
+
       - name: Build release binary
         run: cargo build --release
