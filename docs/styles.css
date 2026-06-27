@@ -64,7 +64,7 @@ pre {
   align-self: start;
   height: 100vh;
   overflow-y: auto;
-  background: #fff;
+  background: #2c2c2c;
   padding: 38px 24px;
 }
 
@@ -72,10 +72,14 @@ pre {
   display: flex;
   align-items: center;
   margin-bottom: 30px;
-  color: #000;
+  color: #fff;
   font-size: 1rem;
   line-height: 1.25;
   text-decoration: none;
+}
+
+.brand span {
+  color: #fff;
 }
 
 .docs-nav {
@@ -92,6 +96,7 @@ pre {
   font-size: 1rem;
   list-style: none;
   padding: 8px 0;
+  color: #fff;
 }
 
 .docs-nav summary::-webkit-details-marker {
@@ -102,7 +107,7 @@ pre {
   display: block;
   margin: 2px 0;
   padding: 6px 0;
-  color: #000;
+  color: #ccc;
   font-size: 0.98rem;
   text-decoration: none;
 }
@@ -111,6 +116,7 @@ pre {
 .nav-link:focus-visible,
 .nav-link.active {
   outline: none;
+  color: #fff;
   text-decoration: underline;
 }
 
@@ -120,7 +126,7 @@ pre {
   justify-content: center;
   min-height: 42px;
   margin-top: 12px;
-  color: #000;
+  color: #ccc;
   text-decoration: underline;
 }
 
@@ -305,7 +311,7 @@ p {
 .terminal-panel code {
   color: #e0e0e0;
   font-size: 0.96rem;
-  font-family: "Times New Roman", Times, serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .terminal-body {
@@ -383,8 +389,17 @@ p {
 .tech-grid,
 .release-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.steps {
+  grid-template-columns: 1fr;
+}
+
+.example-grid,
+.tech-grid,
+.release-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .step-card,
@@ -414,13 +429,6 @@ p {
 .release-list p,
 .example-grid p {
   margin-top: 8px;
-}
-
-.split-section {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
-  gap: 28px;
-  align-items: center;
 }
 
 .download-actions {
@@ -456,12 +464,6 @@ p {
 
 .command-row .command-terminal {
   margin: 0;
-}
-
-.text-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 26px;
 }
 
 .syntax-layout {
@@ -517,7 +519,7 @@ p {
 .example-grid code {
   font-size: 0.9rem;
   color: #e0e0e0;
-  font-family: "Times New Roman", Times, serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .example-grid {
@@ -734,9 +736,7 @@ p {
   }
 
   .section-heading,
-  .split-section,
   .command-row,
-  .text-columns,
   .syntax-layout {
     display: grid;
     grid-template-columns: 1fr;

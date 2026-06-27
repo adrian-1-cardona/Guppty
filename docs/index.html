@@ -33,14 +33,18 @@
           </details>
 
           <details open>
+            <summary>About Guppty</summary>
+            <a href="#about" class="nav-link" data-doc-page="about">About Guppty</a>
+            <a href="#benchmarks" class="nav-link" data-doc-page="about">VM Benchmarks</a>
+            <a href="#why" class="nav-link" data-doc-page="about">Why Guppty?</a>
+            <a href="#architecture" class="nav-link" data-doc-page="about">Technologies Used</a>
+            <a href="#lessons" class="nav-link" data-doc-page="about">What I Learned</a>
+          </details>
+
+          <details open>
             <summary>Learn Guppty</summary>
-            <a href="#about" class="nav-link" data-doc-page="learn">About Guppty</a>
-            <a href="#benchmarks" class="nav-link" data-doc-page="learn">VM Benchmarks</a>
-            <a href="#why" class="nav-link" data-doc-page="learn">Why Guppty?</a>
             <a href="#syntax" class="nav-link" data-doc-page="learn">Syntax</a>
             <a href="#examples" class="nav-link" data-doc-page="learn">Examples</a>
-            <a href="#architecture" class="nav-link" data-doc-page="learn">Technologies Used</a>
-            <a href="#lessons" class="nav-link" data-doc-page="learn">What I Learned</a>
           </details>
 
           <details open>
@@ -562,7 +566,7 @@
         </section>
         </div>
 
-        <div class="doc-page" data-doc-page-panel="learn" hidden>
+        <div class="doc-page" data-doc-page-panel="about" hidden>
         <section class="docs-section" id="about">
           <p class="eyebrow">Project</p>
           <h2>About Guppty</h2>
@@ -635,6 +639,77 @@
           </p>
         </section>
 
+        <section class="docs-section" id="architecture">
+          <p class="eyebrow">Under the Hood</p>
+          <h2>Technologies Used</h2>
+          <p>
+            Guppty is built with a deliberately small technology stack. The entire project is written in Rust using the 2021 edition, and it has zero external runtime dependencies. This was a conscious choice: by avoiding external crates for the core language implementation, every line of code in the lexer, parser, compiler, and VM was written by hand and can be read without needing to understand someone else's library. The only tool you need to build and run Guppty is the standard Rust toolchain, which includes the compiler and the Cargo build system.
+          </p>
+          <p>
+            The language follows a classic pipeline architecture that you would find in any compiler textbook, but implemented in a way that is easy to follow and modify. Source code enters the pipeline as raw text and flows through four distinct stages before producing output. Each stage transforms the data into a progressively more structured form, and each stage is implemented in its own dedicated source file so you can study them in isolation.
+          </p>
+
+          <div class="pipeline" aria-label="Guppty language pipeline">
+            <div><span>Source</span><span>.gup file</span></div>
+            <div><span>Lexer</span><span>tokens</span></div>
+            <div><span>Parser</span><span>AST</span></div>
+            <div><span>Compiler</span><span>bytecode</span></div>
+            <div><span>VM</span><span>stdout</span></div>
+          </div>
+
+          <p>
+            The first stage is the lexer, which reads the raw characters of your source file and groups them into meaningful tokens like numbers, strings, identifiers, operators, and keywords. The lexer also handles indentation tracking, which is what allows Guppty to use whitespace for block structure instead of braces. The second stage is the parser, which takes the flat sequence of tokens and builds them into a hierarchical abstract syntax tree that represents the logical structure of your program. The third stage is the compiler, which walks the AST and emits a sequence of bytecode instructions that encode the same logic in a format the VM can execute efficiently. And the final stage is the virtual machine, which reads those bytecode instructions one at a time and executes them on a stack, producing the output your program was designed to generate.
+          </p>
+
+          <div class="tech-grid">
+            <article>
+              <h3>Rust 2021</h3>
+              <p>
+                Rust was chosen as the implementation language because it provides the exact combination of features that a language tool needs. It compiles to a fast native binary that starts up instantly, which means the CLI feels responsive even for trivial programs. Its type system with enums and pattern matching is ideal for representing tokens, AST nodes, and bytecode instructions in a way that the compiler can check for completeness. And Cargo provides a built-in test runner, build system, and dependency manager that makes the development workflow smooth and repeatable across different machines and operating systems.
+              </p>
+            </article>
+            <article>
+              <h3>Stack VM</h3>
+              <p>
+                The stack-based virtual machine is the default execution backend and represents the more sophisticated of the two approaches to running Guppty programs. It works by maintaining a value stack and a call frame stack, pushing and popping values as it executes instructions. This architecture separates the concerns of compilation and execution, which means you can optimize the compiler without touching the VM, or improve the VM without changing how bytecode is generated. It is the same fundamental design used by languages like Java, Python, and Lua in their virtual machines.
+              </p>
+            </article>
+            <article>
+              <h3>Tree Interpreter</h3>
+              <p>
+                The tree-walking interpreter is the alternative execution backend, accessible through the --interp flag. It works by traversing the AST directly, evaluating each node as it encounters it. This approach is simpler to implement and easier to reason about, which makes it a good reference implementation. When you make changes to the compiler or VM and want to verify that the new behavior is correct, you can run the same program through the interpreter and compare the output. If both backends produce the same result, you can be confident that your change is semantically correct.
+              </p>
+            </article>
+            <article>
+              <h3>Integration Tests</h3>
+              <p>
+                The test suite works by running real .gup example programs through the language pipeline and comparing their actual output against expected output files stored in the repository. This approach has several advantages over unit testing individual components: it tests the entire system end-to-end, it uses the same programs that users see in the documentation, and it catches regressions at the behavior level rather than the implementation level. If a test fails, you know exactly what the user would see differently, which makes debugging straightforward.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="docs-section" id="lessons">
+          <p class="eyebrow">Notes</p>
+          <h2>What I Learned</h2>
+          <p>
+            Building a programming language from scratch, even a small one, teaches you things that you cannot learn any other way. There is a fundamental difference between reading about how compilers work in a textbook and actually implementing one yourself, feeling the friction of real decisions, debugging real edge cases, and experiencing the satisfaction of watching your language run a program for the first time. The lessons below are the most significant things this project taught me, not just about language implementation specifically, but about software engineering in general.
+          </p>
+          <div class="note-list">
+            <p>
+              Language features connect faster than you expect. When you add a single new keyword or operator to the language, that change touches almost every layer of the system. You update the syntax definition, modify the lexer to recognize the new token, extend the parser to handle the new grammar rule, teach the compiler to emit appropriate bytecode for it, and update the VM to execute that bytecode correctly. Then you write an example program that uses the feature, create an expected output file, and verify that both backends produce the same result. What seems like a small addition from the outside turns out to be a journey through the entire codebase, and that is exactly what makes it educational.
+            </p>
+            <p>
+              Example programs are deceptively powerful. The .gup files in the examples directory look like simple demonstrations for users, but they quietly serve as the foundation of the entire testing strategy. Every time you run the test suite, those examples are compiled and executed, and their output is compared against the expected files. This means that the documentation and the test suite are the same thing, which keeps them permanently synchronized. You cannot break a feature without breaking a test, and you cannot add a test without also creating a demonstration that users can learn from.
+            </p>
+            <p>
+              Error messages matter more than almost any other feature. A language can have beautiful syntax and elegant semantics, but if it responds to mistakes with cryptic messages or unhelpful line numbers, people will hate using it. Spending time on clear, located error messages with context about what went wrong and where makes the CLI feel like a real tool rather than a frustrating puzzle. It is the difference between "unexpected token" and "expected a closing parenthesis on line 7, but found the end of the line instead." The second version respects the user's time and helps them fix the problem immediately.
+            </p>
+          </div>
+        </section>
+                </div>
+
+        <div class="doc-page" data-doc-page-panel="learn" hidden>
         <section class="docs-section" id="syntax">
           <div class="section-heading">
             <div>
@@ -802,74 +877,6 @@ out(factorial(5))</code></pre>
           </div>
         </section>
 
-        <section class="docs-section" id="architecture">
-          <p class="eyebrow">Under the Hood</p>
-          <h2>Technologies Used</h2>
-          <p>
-            Guppty is built with a deliberately small technology stack. The entire project is written in Rust using the 2021 edition, and it has zero external runtime dependencies. This was a conscious choice: by avoiding external crates for the core language implementation, every line of code in the lexer, parser, compiler, and VM was written by hand and can be read without needing to understand someone else's library. The only tool you need to build and run Guppty is the standard Rust toolchain, which includes the compiler and the Cargo build system.
-          </p>
-          <p>
-            The language follows a classic pipeline architecture that you would find in any compiler textbook, but implemented in a way that is easy to follow and modify. Source code enters the pipeline as raw text and flows through four distinct stages before producing output. Each stage transforms the data into a progressively more structured form, and each stage is implemented in its own dedicated source file so you can study them in isolation.
-          </p>
-
-          <div class="pipeline" aria-label="Guppty language pipeline">
-            <div><span>Source</span><span>.gup file</span></div>
-            <div><span>Lexer</span><span>tokens</span></div>
-            <div><span>Parser</span><span>AST</span></div>
-            <div><span>Compiler</span><span>bytecode</span></div>
-            <div><span>VM</span><span>stdout</span></div>
-          </div>
-
-          <p>
-            The first stage is the lexer, which reads the raw characters of your source file and groups them into meaningful tokens like numbers, strings, identifiers, operators, and keywords. The lexer also handles indentation tracking, which is what allows Guppty to use whitespace for block structure instead of braces. The second stage is the parser, which takes the flat sequence of tokens and builds them into a hierarchical abstract syntax tree that represents the logical structure of your program. The third stage is the compiler, which walks the AST and emits a sequence of bytecode instructions that encode the same logic in a format the VM can execute efficiently. And the final stage is the virtual machine, which reads those bytecode instructions one at a time and executes them on a stack, producing the output your program was designed to generate.
-          </p>
-
-          <div class="tech-grid">
-            <article>
-              <h3>Rust 2021</h3>
-              <p>
-                Rust was chosen as the implementation language because it provides the exact combination of features that a language tool needs. It compiles to a fast native binary that starts up instantly, which means the CLI feels responsive even for trivial programs. Its type system with enums and pattern matching is ideal for representing tokens, AST nodes, and bytecode instructions in a way that the compiler can check for completeness. And Cargo provides a built-in test runner, build system, and dependency manager that makes the development workflow smooth and repeatable across different machines and operating systems.
-              </p>
-            </article>
-            <article>
-              <h3>Stack VM</h3>
-              <p>
-                The stack-based virtual machine is the default execution backend and represents the more sophisticated of the two approaches to running Guppty programs. It works by maintaining a value stack and a call frame stack, pushing and popping values as it executes instructions. This architecture separates the concerns of compilation and execution, which means you can optimize the compiler without touching the VM, or improve the VM without changing how bytecode is generated. It is the same fundamental design used by languages like Java, Python, and Lua in their virtual machines.
-              </p>
-            </article>
-            <article>
-              <h3>Tree Interpreter</h3>
-              <p>
-                The tree-walking interpreter is the alternative execution backend, accessible through the --interp flag. It works by traversing the AST directly, evaluating each node as it encounters it. This approach is simpler to implement and easier to reason about, which makes it a good reference implementation. When you make changes to the compiler or VM and want to verify that the new behavior is correct, you can run the same program through the interpreter and compare the output. If both backends produce the same result, you can be confident that your change is semantically correct.
-              </p>
-            </article>
-            <article>
-              <h3>Integration Tests</h3>
-              <p>
-                The test suite works by running real .gup example programs through the language pipeline and comparing their actual output against expected output files stored in the repository. This approach has several advantages over unit testing individual components: it tests the entire system end-to-end, it uses the same programs that users see in the documentation, and it catches regressions at the behavior level rather than the implementation level. If a test fails, you know exactly what the user would see differently, which makes debugging straightforward.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <section class="docs-section" id="lessons">
-          <p class="eyebrow">Notes</p>
-          <h2>What I Learned</h2>
-          <p>
-            Building a programming language from scratch, even a small one, teaches you things that you cannot learn any other way. There is a fundamental difference between reading about how compilers work in a textbook and actually implementing one yourself, feeling the friction of real decisions, debugging real edge cases, and experiencing the satisfaction of watching your language run a program for the first time. The lessons below are the most significant things this project taught me, not just about language implementation specifically, but about software engineering in general.
-          </p>
-          <div class="note-list">
-            <p>
-              Language features connect faster than you expect. When you add a single new keyword or operator to the language, that change touches almost every layer of the system. You update the syntax definition, modify the lexer to recognize the new token, extend the parser to handle the new grammar rule, teach the compiler to emit appropriate bytecode for it, and update the VM to execute that bytecode correctly. Then you write an example program that uses the feature, create an expected output file, and verify that both backends produce the same result. What seems like a small addition from the outside turns out to be a journey through the entire codebase, and that is exactly what makes it educational.
-            </p>
-            <p>
-              Example programs are deceptively powerful. The .gup files in the examples directory look like simple demonstrations for users, but they quietly serve as the foundation of the entire testing strategy. Every time you run the test suite, those examples are compiled and executed, and their output is compared against the expected files. This means that the documentation and the test suite are the same thing, which keeps them permanently synchronized. You cannot break a feature without breaking a test, and you cannot add a test without also creating a demonstration that users can learn from.
-            </p>
-            <p>
-              Error messages matter more than almost any other feature. A language can have beautiful syntax and elegant semantics, but if it responds to mistakes with cryptic messages or unhelpful line numbers, people will hate using it. Spending time on clear, located error messages with context about what went wrong and where makes the CLI feel like a real tool rather than a frustrating puzzle. It is the difference between "unexpected token" and "expected a closing parenthesis on line 7, but found the end of the line instead." The second version respects the user's time and helps them fix the problem immediately.
-            </p>
-          </div>
-        </section>
         </div>
 
         <div class="doc-page" data-doc-page-panel="project" hidden>
@@ -906,19 +913,19 @@ out(factorial(5))</code></pre>
 
           <div class="note-list">
             <p>
-              <strong>cargo or rustc is not found.</strong> This means the Rust toolchain is not installed on your machine, or it is installed but its bin directory is not on your shell's PATH. The fix is to install Rust from <a href="https://rustup.rs" target="_blank" rel="noreferrer">rustup.rs</a> and then restart your terminal completely. On macOS and Linux, the installer adds a line to your shell profile that puts ~/.cargo/bin on the PATH, but that change only takes effect in new terminal sessions. If you have just installed Rust and the command still is not found, opening a new terminal window or tab will almost always solve the problem. On Windows, you may need to log out and back in for the PATH change to propagate system-wide.
+              cargo or rustc is not found. This means the Rust toolchain is not installed on your machine, or it is installed but its bin directory is not on your shell's PATH. The fix is to install Rust from <a href="https://rustup.rs" target="_blank" rel="noreferrer">rustup.rs</a> and then restart your terminal completely. On macOS and Linux, the installer adds a line to your shell profile that puts ~/.cargo/bin on the PATH, but that change only takes effect in new terminal sessions. If you have just installed Rust and the command still is not found, opening a new terminal window or tab will almost always solve the problem. On Windows, you may need to log out and back in for the PATH change to propagate system-wide.
             </p>
             <p>
-              <strong>guppty is not found after install.</strong> This typically means that cargo install --path . completed successfully but the resulting binary is in a directory that your shell does not know about. The binary gets placed in ~/.cargo/bin on macOS and Linux, or in C:\Users\YourName\.cargo\bin on Windows. Verify that this directory is on your PATH by running echo $PATH on macOS/Linux or echo %PATH% on Windows and looking for the cargo bin entry. If it is missing, you need to add it manually to your shell configuration file. Another possibility is that you ran the install command from the wrong directory. Make sure you are inside the Guppty repository root where the Cargo.toml file lives when you run the command.
+              guppty is not found after install. This typically means that cargo install --path . completed successfully but the resulting binary is in a directory that your shell does not know about. The binary gets placed in ~/.cargo/bin on macOS and Linux, or in C:\Users\YourName\.cargo\bin on Windows. Verify that this directory is on your PATH by running echo $PATH on macOS/Linux or echo %PATH% on Windows and looking for the cargo bin entry. If it is missing, you need to add it manually to your shell configuration file. Another possibility is that you ran the install command from the wrong directory. Make sure you are inside the Guppty repository root where the Cargo.toml file lives when you run the command.
             </p>
             <p>
-              <strong>The CLI cannot read my file.</strong> This error appears when you pass a file path that does not exist or that does not end with the .gup extension. Double-check your spelling and make sure you are using the correct relative path from your current directory. The command expects the full path to the file, like guppty examples/hello.gup or guppty ./my_program.gup. If you are on Windows, you can use either forward slashes or backslashes in the path. If the file definitely exists, try using the absolute path to rule out any working-directory confusion.
+              The CLI cannot read my file. This error appears when you pass a file path that does not exist or that does not end with the .gup extension. Double-check your spelling and make sure you are using the correct relative path from your current directory. The command expects the full path to the file, like guppty examples/hello.gup or guppty ./my_program.gup. If you are on Windows, you can use either forward slashes or backslashes in the path. If the file definitely exists, try using the absolute path to rule out any working-directory confusion.
             </p>
             <p>
-              <strong>Indented blocks behave unexpectedly.</strong> Guppty uses indentation to determine block structure, which means that inconsistent spacing can cause the parser to misinterpret your code. Make sure you are using the same indentation style throughout your file. Spaces and tabs should not be mixed. The convention in Guppty examples is four spaces per indent level. If you are using a text editor, configure it to insert spaces when you press the tab key and set the tab width to four. The most common mistake is accidentally using a different number of spaces for one line in a block, which makes the parser think the block has ended when it has not.
+              Indented blocks behave unexpectedly. Guppty uses indentation to determine block structure, which means that inconsistent spacing can cause the parser to misinterpret your code. Make sure you are using the same indentation style throughout your file. Spaces and tabs should not be mixed. The convention in Guppty examples is four spaces per indent level. If you are using a text editor, configure it to insert spaces when you press the tab key and set the tab width to four. The most common mistake is accidentally using a different number of spaces for one line in a block, which makes the parser think the block has ended when it has not.
             </p>
             <p>
-              <strong>How do I check that everything still works?</strong> The simplest way to verify that the language is functioning correctly is to run cargo test from the repository root. This command builds the project and then runs the complete integration test suite, which executes every example program in the examples directory and compares the output against the corresponding expected output file. If all tests pass, the language is working as designed. If a test fails, the output will show you which example produced different output than expected, making it easy to identify what changed and where to look for the problem.
+              How do I check that everything still works? The simplest way to verify that the language is functioning correctly is to run cargo test from the repository root. This command builds the project and then runs the complete integration test suite, which executes every example program in the examples directory and compares the output against the corresponding expected output file. If all tests pass, the language is working as designed. If a test fails, the output will show you which example produced different output than expected, making it easy to identify what changed and where to look for the problem.
             </p>
           </div>
         </section>
