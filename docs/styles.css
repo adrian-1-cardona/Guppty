@@ -157,10 +157,6 @@ pre {
   scroll-behavior: smooth;
 }
 
-.content:focus {
-  outline: none;
-}
-
 .doc-page[hidden] {
   display: none;
 }
