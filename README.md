@@ -34,7 +34,7 @@ Guppty is working!
 5
 ```
 
-2. RECOMMDED (what I use ): install the local `guppty` command:
+2. Recommended (what I use): install the local `guppty` command:
 
 ```bash
 cargo install --path .
