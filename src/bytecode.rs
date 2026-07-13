@@ -88,8 +88,6 @@ pub enum Constant {
 /// A compiled function body — params + bytecode + how many upvalues it needs.
 #[derive(Debug, Clone)]
 pub struct CompiledFunction {
-  #[allow(dead_code)]
-  pub name: String,
   pub arity: usize,
   pub chunk: Chunk,
   pub upvalues: Vec<UpvalueDescriptor>,
@@ -149,13 +147,6 @@ impl Chunk {
   pub fn write(&mut self, byte: u8, span: Span) {
     self.code.push(byte);
     self.spans.push(span);
-  }
-
-  /// Write a 16-bit number as two bytes (big-endian: high byte first).
-  #[allow(dead_code)]
-  pub fn write_u16(&mut self, value: u16, span: Span) {
-    self.write((value >> 8) as u8, span);
-    self.write((value & 0xff) as u8, span);
   }
 
   /// Patch a jump offset after we know how far to jump.

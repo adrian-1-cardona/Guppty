@@ -753,7 +753,6 @@ mod tests {
     /// Wrap the assembled chunk in a runnable script function.
     fn finish(&mut self) -> RcCompiledFunction {
       Rc::new(RefCell::new(CompiledFunction {
-        name: "<test>".to_string(),
         arity: 0,
         chunk: std::mem::take(&mut self.chunk),
         upvalues: Vec::new(),

@@ -60,12 +60,12 @@ pub fn compile(program: &Program) -> Result<RcCompiledFunction, GupError> {
   }
 
   let mut compiler = Compiler::new(globals);
-  let script = compiler.begin_function("<script>", 0, None, program);
+  let script = compiler.begin_function(0, None, program);
 
   // Pass 1: register top-level functions (same order as the tree-walking interpreter).
   for stmt in program {
     if let StmtKind::FunctionDef { name, params, body } = &stmt.kind {
-      let function = compiler.compile_function(name, params, body, stmt.span)?;
+      let function = compiler.compile_function(params, body, stmt.span)?;
       let constant = compiler.add_constant(Constant::Function(function));
       compiler.emit_bytes(OpCode::Closure, &[constant], stmt.span);
       compiler.define_global(name, stmt.span);
@@ -97,7 +97,6 @@ impl Compiler {
 
   fn begin_function(
     &mut self,
-    name: &str,
     arity: usize,
     enclosing: Option<usize>,
     body: &[Stmt],
@@ -106,7 +105,6 @@ impl Compiler {
       .iter()
       .any(|stmt| matches!(stmt.kind, StmtKind::FunctionDef { .. }));
     let function = Rc::new(RefCell::new(CompiledFunction {
-      name: name.to_string(),
       arity,
       chunk: Chunk::new(),
       upvalues: Vec::new(),
@@ -386,13 +384,12 @@ impl Compiler {
 
   fn compile_function(
     &mut self,
-    name: &str,
     params: &[String],
     body: &[Stmt],
     span: Span,
   ) -> Result<RcCompiledFunction, GupError> {
     let enclosing = self.current;
-    self.begin_function(name, params.len(), Some(enclosing), body);
+    self.begin_function(params.len(), Some(enclosing), body);
 
     self.contexts[self.current].scope_depth = 1;
     for param in params {
@@ -501,7 +498,7 @@ impl Compiler {
       }
 
       StmtKind::FunctionDef { name, params, body } => {
-        let function = self.compile_function(name, params, body, stmt.span)?;
+        let function = self.compile_function(params, body, stmt.span)?;
         let constant = self.add_constant(Constant::Function(function));
         self.emit_bytes(OpCode::Closure, &[constant], stmt.span);
         let name_constant = self.add_string_constant(name);
