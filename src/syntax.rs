@@ -1,10 +1,9 @@
 // === syntax.rs ===
-// this file is like a menu at a restaurant!
-// if you want to change how guppy words look later,
+// if you want to change how guppty words look later,
 // you change them HERE and not in 50 other places.
 // that matters SO much because one change fixes everything!
 
-/// all the special words and names guppy uses.
+/// all the special words and names guppty uses.
 /// change a word here and the whole language listens!
 pub struct SyntaxConfig {
     pub print_fn: &'static str,
