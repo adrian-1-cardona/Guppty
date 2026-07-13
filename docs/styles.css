@@ -157,10 +157,6 @@ pre {
   scroll-behavior: smooth;
 }
 
-.content:focus {
-  outline: none;
-}
-
 .doc-page[hidden] {
   display: none;
 }
@@ -664,11 +660,6 @@ p {
 
 .tree-bar {
   width: 98%;
-}
-
-.benchmark-note {
-  max-width: 760px;
-  margin-top: 12px;
 }
 
 .mobile-menu {
