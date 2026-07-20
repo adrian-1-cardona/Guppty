@@ -322,9 +322,6 @@ impl Vm {
           };
           self.push(Value::GuppyNumber(len));
         }
-        OpCode::DefineLocal => {
-          return Err(self.runtime_error("Internal compiler error: DefineLocal reached."));
-        }
       }
     }
   }
