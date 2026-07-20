@@ -58,6 +58,31 @@ comparison operators, and logical operators.
 More examples live in `examples/`. Expected output files live in
 `examples/expected/`.
 
+## Error Messages
+
+Guppty errors are the opposite of a Java-style stack trace: instead of a wall of
+call frames, every error answers three questions right where the mistake is.
+
+1. **Where** it happened — `file:line:column`, plus the source line with a caret.
+2. **What** type of error it is — a short name like `NameError` or `SyntaxError`.
+3. **How** to fix it — a single `help:` line with a concrete suggestion.
+
+For example, running a program that uses an undeclared variable on line 3:
+
+```text
+program.gup:3:5: NameError: Variable 'oops' is not defined yet!
+  |
+3 | out(oops)
+  |     ^^^^ NameError here
+  |
+  = help: Declare it first (e.g. `name = value`) or check the spelling.
+```
+
+The error types cover the whole pipeline: `SyntaxError`, `IndentationError`,
+`NameError`, `TypeError`, `ValueError`, `MathError`, `ArgumentError`,
+`IndexError`, `RuntimeError`, and `InternalError`. The classification and the
+fix suggestions live in one place, `src/error.rs`.
+
 ## Architecture
 
 ```mermaid

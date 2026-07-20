@@ -35,15 +35,24 @@ fn run_temp_source(name: &str, source: &str) -> (String, i32) {
     )
 }
 
+// Every readable error should answer three questions, without a stack trace:
+//   WHERE it is (file:line:column + the source line and a caret),
+//   WHAT type it is (a named error type), and
+//   HOW to fix it (a single-line "help:" suggestion).
+
 #[test]
 fn lex_errors_are_readable_and_located() {
     let (stderr, exit_code) = run_temp_source("lex-error", "out(@)");
 
     assert_ne!(exit_code, 0);
-    assert!(stderr.contains("lex error"));
-    assert!(stderr.contains("span: line 1, column 5, length 1"));
+    // WHERE
+    assert!(stderr.contains(":1:5:"));
     assert!(stderr.contains("out(@)"));
     assert!(stderr.contains("^"));
+    // WHAT
+    assert!(stderr.contains("SyntaxError"));
+    // HOW
+    assert!(stderr.contains("help:"));
     assert!(!stderr.contains("panicked at"));
 }
 
@@ -52,9 +61,13 @@ fn parse_errors_are_readable_and_located() {
     let (stderr, exit_code) = run_temp_source("parse-error", "out(1 + )");
 
     assert_ne!(exit_code, 0);
-    assert!(stderr.contains("parse error"));
-    assert!(stderr.contains("span: line 1, column 9, length 1"));
+    // WHERE
+    assert!(stderr.contains(":1:9:"));
+    // WHAT + original message
+    assert!(stderr.contains("SyntaxError"));
     assert!(stderr.contains("I expected an expression"));
+    // HOW
+    assert!(stderr.contains("help:"));
     assert!(!stderr.contains("panicked at"));
 }
 
@@ -63,8 +76,35 @@ fn runtime_errors_are_readable_and_located() {
     let (stderr, exit_code) = run_temp_source("runtime-error", "out(missing)");
 
     assert_ne!(exit_code, 0);
-    assert!(stderr.contains("runtime error"));
-    assert!(stderr.contains("span: line 1, column 5, length 7"));
+    // WHERE
+    assert!(stderr.contains(":1:5:"));
+    // WHAT
+    assert!(stderr.contains("NameError"));
     assert!(stderr.contains("Variable 'missing' is not defined yet"));
+    // HOW
+    assert!(stderr.contains("help:"));
+    assert!(!stderr.contains("panicked at"));
+}
+
+#[test]
+fn errors_point_at_the_right_line_in_a_multiline_program() {
+    // The mistake is on line 3; the error must say line 3, not line 1.
+    let source = "x = 1\ny = 2\nout(oops)\n";
+    let (stderr, exit_code) = run_temp_source("multiline-error", source);
+
+    assert_ne!(exit_code, 0);
+    assert!(stderr.contains(":3:5:"), "stderr was:\n{}", stderr);
+    assert!(stderr.contains("NameError"));
+    assert!(stderr.contains("out(oops)"));
+    assert!(stderr.contains("help:"));
+}
+
+#[test]
+fn divide_by_zero_reports_a_math_error_with_help() {
+    let (stderr, exit_code) = run_temp_source("divzero-error", "out(1 / 0)");
+
+    assert_ne!(exit_code, 0);
+    assert!(stderr.contains("MathError"), "stderr was:\n{}", stderr);
+    assert!(stderr.contains("help:"));
     assert!(!stderr.contains("panicked at"));
 }
