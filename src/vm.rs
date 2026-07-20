@@ -13,7 +13,7 @@ use std::rc::Rc;
 use crate::bytecode::{
   decode_opcode, ClosureUpvalue, ClosureValue, Constant, OpCode, RcCompiledFunction,
 };
-use crate::error::{GupError, Span};
+use crate::error::{ErrorKind, GupError, Span};
 use crate::value::Value;
 
 /// One active function call — where we are in the recipe and our local plates.
@@ -566,11 +566,13 @@ impl Vm {
     let callee = self.peek(arg_count).clone();
     match callee {
       Value::GuppyClosure(closure) => self.call_closure(closure, arg_count),
-      other => Err(self.runtime_error(format!(
-        "'{}' is not a function. It is {}.",
-        "<call>",
-        other.to_display_string()
-      ))),
+      other => Err(self
+        .runtime_error(format!(
+          "This value cannot be called like a function. It is {}.",
+          other.to_display_string()
+        ))
+        .with_kind(ErrorKind::TypeError)
+        .with_hint("Only call functions defined with a function; check the value before '('.")),
     }
   }
 
