@@ -15,6 +15,109 @@ fn guppty_without_file_exits_with_error() {
 
     // should NOT be success (they forgot the file!)
     assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let combined = format!("{stdout}{stderr}");
+    assert!(
+        combined.contains("Usage:") || combined.contains("guppty new"),
+        "expected help text, got:\n{combined}"
+    );
+}
+
+#[test]
+fn guppty_help_prints_usage() {
+    let bin = env!("CARGO_BIN_EXE_guppty");
+    let output = Command::new(bin)
+        .arg("help")
+        .output()
+        .expect("failed to run guppty help");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("guppty new"));
+    assert!(stdout.contains("guppty compile"));
+    assert!(stdout.contains("guppty run"));
+}
+
+#[test]
+fn guppty_new_creates_a_gup_program() {
+    let bin = env!("CARGO_BIN_EXE_guppty");
+    let mut dir = std::env::temp_dir();
+    dir.push(format!("guppty-new-{}", process::id()));
+    fs::create_dir_all(&dir).expect("temp dir");
+
+    let mut path = dir.clone();
+    path.push("fresh.gup");
+    let _ = fs::remove_file(&path);
+
+    let output = Command::new(bin)
+        .args(["new", "fresh"])
+        .current_dir(&dir)
+        .output()
+        .expect("failed to run guppty new");
+
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(path.exists(), "expected {}", path.display());
+    let source = fs::read_to_string(&path).expect("read new file");
+    assert!(source.contains("out("));
+    assert!(source.contains("//"));
+    assert!(source.contains(".gup"));
+
+    let _ = fs::remove_file(&path);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn guppty_compile_checks_a_program_without_running() {
+    let bin = env!("CARGO_BIN_EXE_guppty");
+    let mut path = std::env::temp_dir();
+    path.push(format!("guppty-compile-{}.gup", process::id()));
+    fs::write(&path, "out(\"compile me\")\n").expect("write");
+
+    let output = Command::new(bin)
+        .args(["compile", path.to_str().unwrap()])
+        .output()
+        .expect("failed to run guppty compile");
+
+    let _ = fs::remove_file(&path);
+
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Compiled"));
+    assert!(stdout.contains("bytecode"));
+    // compile should not execute out()
+    assert!(!stdout.contains("compile me"));
+}
+
+#[test]
+fn guppty_run_subcommand_executes_a_program() {
+    let bin = env!("CARGO_BIN_EXE_guppty");
+    let mut path = std::env::temp_dir();
+    path.push(format!("guppty-run-{}.gup", process::id()));
+    fs::write(&path, "out(\"ran via subcommand\")\n").expect("write");
+
+    let output = Command::new(bin)
+        .args(["run", path.to_str().unwrap()])
+        .output()
+        .expect("failed to run guppty run");
+
+    let _ = fs::remove_file(&path);
+
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ran via subcommand"));
 }
 
 fn run_temp_source(name: &str, source: &str) -> (String, i32) {

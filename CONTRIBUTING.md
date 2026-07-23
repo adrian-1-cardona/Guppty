@@ -4,11 +4,24 @@ Thanks for helping improve Guppty.
 
 ## Setup
 
-1. Install Rust from <https://rustup.rs>.
-2. Run the test suite:
+Fastest path (checks for Rust and installs it only if needed):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash
+```
+
+Or install Rust from <https://rustup.rs>, then from this repo:
 
 ```bash
 cargo test
+```
+
+## Making your own programs
+
+```bash
+guppty new hello
+guppty compile hello.gup
+guppty hello.gup
 ```
 
 ## Development Notes

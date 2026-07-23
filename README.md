@@ -4,15 +4,39 @@ Guppty is a small indentation-based programming language implemented in Rust.
 It reads `.gup` files, turns them into tokens and an AST, compiles to bytecode,
 and runs the program on a stack-based virtual machine from the terminal.
 
+## Install (one line)
+
+macOS / Linux — fresh install that checks for Rust and installs it only if needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex
+```
+
+You only need to run the install command **once**. After that, `guppty` stays on
+your machine and you can create, compile, and run `.gup` programs anytime:
+
+```bash
+guppty new hello
+guppty compile hello.gup
+guppty hello.gup
+```
+
 ## Why
 
 Guppty is meant to be simple enough to learn from and pleasant enough to extend.
 The interpreter is split into clear language phases, examples double as behavior
 checks, and keyword syntax lives in one place: `src/syntax.rs`.
 
-## Quick Start
+## Quick Start (from source)
 
-Prerequisite: install Rust once from <https://rustup.rs>.
+Prerequisite: install Rust once from <https://rustup.rs> (or use the one-line
+installer above, which does this for you).
 
 1. Run an example:
 
@@ -39,6 +63,16 @@ Guppty is working!
 ```bash
 cargo install --path .
 guppty examples/hello.gup
+```
+
+## CLI
+
+```text
+guppty new <name>           Create a fresh .gup program
+guppty compile <file.gup>   Compile to bytecode (check for errors)
+guppty run <file.gup>       Run a program
+guppty <file.gup>           Same as run
+guppty help                 Show usage
 ```
 
 ## Example
@@ -81,7 +115,7 @@ program.gup:3:5: NameError: Variable 'oops' is not defined yet!
 The error types cover the whole pipeline: `SyntaxError`, `IndentationError`,
 `NameError`, `TypeError`, `ValueError`, `MathError`, `ArgumentError`,
 `IndexError`, `RuntimeError`, and `InternalError`. The classification and the
-fix suggestions live in one place, `src/error.rs`.
+help suggestions live in one place, `src/error.rs`.
 
 ## Architecture
 
@@ -110,6 +144,9 @@ examples/            Runnable .gup programs
 examples/expected/   Expected stdout for example tests
 tests/               Integration tests for the language pipeline
 design/              Grammar and syntax notes
+install.sh           One-line macOS/Linux installer
+install.ps1          One-line Windows PowerShell installer
+docs/                Documentation site
 .github/workflows/   CI for build and test checks
 ```
 
