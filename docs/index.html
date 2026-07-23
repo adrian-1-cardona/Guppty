@@ -84,6 +84,9 @@
             <p>
               Paste this into your terminal. It performs a fresh install: detects Rust, installs it only when needed, fetches Guppty, builds the <code>guppty</code> command, verifies the install with an example, and prints next steps for writing your own <code>.gup</code> programs.
             </p>
+            <p>
+              You only need to run the install command <strong>once</strong>. After that, <code>guppty</code> stays on your machine and you can create, compile, and run <code>.gup</code> programs anytime.
+            </p>
 
             <div class="terminal-panel command-terminal one-line-install">
               <div class="terminal-top" aria-hidden="true">
@@ -125,13 +128,13 @@
             <div class="section-heading" style="margin-top: 2rem;">
               <div>
                 <h2>Make your own program</h2>
-                <p>After install</p>
+                <p>Anytime after that one install</p>
               </div>
               <div class="status-chip">.gup files</div>
             </div>
 
             <p>
-              Once <code>guppty</code> is on your PATH, create a new program, compile-check it, and run it. Every Guppty source file uses the <code>.gup</code> extension.
+              After the one-time install, <code>guppty</code> stays on your machine. Create a new program, compile-check it, and run it whenever you want. Every Guppty source file uses the <code>.gup</code> extension.
             </p>
 
             <div class="terminal-panel command-terminal">
@@ -141,8 +144,10 @@
                 <span class="dot green"></span>
               </div>
               <div class="terminal-body">
-                <code>guppty new hello &amp;&amp; guppty compile hello.gup &amp;&amp; guppty hello.gup</code>
-                <button class="copy-button" type="button" data-copy="guppty new hello &amp;&amp; guppty compile hello.gup &amp;&amp; guppty hello.gup" aria-label="Copy create compile run commands">
+                <code>guppty new hello<br>guppty compile hello.gup<br>guppty hello.gup</code>
+                <button class="copy-button" type="button" data-copy="guppty new hello
+guppty compile hello.gup
+guppty hello.gup" aria-label="Copy create compile run commands">
                   <span class="copy-icon" aria-hidden="true"></span>
                   <span>Copy</span>
                 </button>

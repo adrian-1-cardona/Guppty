@@ -18,7 +18,8 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex
 ```
 
-After install you can create, compile, and run your own programs:
+You only need to run the install command **once**. After that, `guppty` stays on
+your machine and you can create, compile, and run `.gup` programs anytime:
 
 ```bash
 guppty new hello
