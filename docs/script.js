@@ -1,22 +1,34 @@
 const content = document.querySelector(".content");
 const menuButton = document.querySelector(".mobile-menu");
+const mobileOverlay = document.querySelector(".mobile-overlay");
 const sidebar = document.querySelector(".sidebar");
 const navLinks = [...document.querySelectorAll(".nav-link")];
 const docPagePanels = [...document.querySelectorAll("[data-doc-page-panel]")];
 const docPageLinks = [...document.querySelectorAll("[data-doc-page]")];
 
+const MOBILE_BREAKPOINT = window.matchMedia("(max-width: 820px)");
+
 function setMenu(open) {
   document.body.classList.toggle("menu-open", open);
   menuButton?.setAttribute("aria-expanded", String(open));
+  menuButton?.setAttribute("aria-label", open ? "Close documentation menu" : "Open documentation menu");
 }
 
 menuButton?.addEventListener("click", () => {
   setMenu(!document.body.classList.contains("menu-open"));
 });
 
+mobileOverlay?.addEventListener("click", () => setMenu(false));
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.body.classList.contains("menu-open")) {
+    setMenu(false);
+  }
+});
+
 sidebar?.addEventListener("click", (event) => {
   const target = event.target;
-  if (target instanceof HTMLAnchorElement && window.matchMedia("(max-width: 820px)").matches) {
+  if (target instanceof HTMLAnchorElement && MOBILE_BREAKPOINT.matches) {
     setMenu(false);
   }
 });
@@ -72,13 +84,13 @@ async function copyText(text, button) {
 
   const label = button.querySelector("span:last-child");
   const previousText = label?.textContent;
-  if (label) label.textContent = "Copied";
+  if (label) label.textContent = "Copied!";
   button.classList.add("copied");
 
   window.setTimeout(() => {
     if (label && previousText) label.textContent = previousText;
     button.classList.remove("copied");
-  }, 1200);
+  }, 1500);
 }
 
 document.querySelectorAll("[data-copy]").forEach((button) => {
@@ -127,7 +139,9 @@ function showDocPage(pageName, hash, scroll = true) {
   const target = document.querySelector(activeHash);
   if (target) {
     content.scrollTo({ top: 0, behavior: "auto" });
-    window.requestAnimationFrame(() => target.scrollIntoView({ block: "start" }));
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 }
 
@@ -154,6 +168,7 @@ docPageLinks.forEach((link) => {
 });
 
 window.addEventListener("hashchange", () => navigateToHash(window.location.hash, true));
+window.addEventListener("popstate", () => navigateToHash(window.location.hash, true));
 
 let scrollFrame = 0;
 
@@ -162,14 +177,17 @@ function updateActiveSectionFromScroll() {
 
   const activePanel = docPagePanels.find((panel) => !panel.hidden);
   const sections = [...(activePanel?.querySelectorAll(".docs-section[id]") || [])];
+  if (sections.length === 0) return;
+
   const contentTop = content.getBoundingClientRect().top;
-  const current =
-    sections
-      .map((section) => ({
-        section,
-        distance: Math.abs(section.getBoundingClientRect().top - contentTop - 70),
-      }))
-      .sort((a, b) => a.distance - b.distance)[0]?.section || sections[0];
+  const threshold = contentTop + 100;
+
+  let current = sections[0];
+  for (const section of sections) {
+    if (section.getBoundingClientRect().top <= threshold) {
+      current = section;
+    }
+  }
 
   if (current) setActiveNav(`#${current.id}`);
 }
