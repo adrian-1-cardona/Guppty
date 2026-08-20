@@ -74,113 +74,106 @@
         <div class="doc-page active" data-doc-page-panel="getting-started">
 
           <section class="hero docs-section" id="installation">
-            <p class="eyebrow">Version 0.1.0</p>
+            <p class="eyebrow">Getting Started · v0.1.0</p>
             <h1>Get Guppty on your machine</h1>
             <p class="hero-copy">
-              Guppty is a small language I wrote in Rust. You write programs in <code>.gup</code> files, compile them to bytecode, and run them from the terminal. No fancy setup — just one install command and you're good to go.
-            </p>
-            <p class="hero-copy">
-              The installer checks if you already have Rust. If you do, it skips that step. If you don't, it installs Rust for you, builds the <code>guppty</code> command, runs a quick test, and prints what to do next.
+              Guppty is a small language I wrote in Rust. You write programs in <code>.gup</code> files, compile them to bytecode, and run them from the terminal.
             </p>
 
-            <div class="quick-install" aria-label="One-line installation">
-              <div class="section-heading">
-                <div>
-                  <h2>One-line install</h2>
-                  <p>macOS and Linux</p>
+            <div class="install-card tab-group" data-tab-group="quick-install" aria-label="Install Guppty">
+              <div class="install-card-bar">
+                <div class="install-card-title">
+                  <h2>Install <span class="status-chip">Recommended</span></h2>
+                  <p>One command. Rust is installed only if you don't already have it.</p>
                 </div>
-                <div class="status-chip">Recommended</div>
-              </div>
-
-              <p>Paste this in your terminal. That's it — one time, and <code>guppty</code> stays on your machine.</p>
-
-              <div class="callout">
-                <strong>Run the install once.</strong> After that you can create, compile, and run <code>.gup</code> programs whenever you want.
-              </div>
-
-              <div class="terminal-panel command-terminal one-line-install">
-                <div class="terminal-top" aria-hidden="true">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                </div>
-                <div class="terminal-body">
-                  <code>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
-                  <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy install command">
-                    <span class="copy-icon" aria-hidden="true"></span>
-                    <span>Copy</span>
-                  </button>
+                <div class="tabs" role="tablist" aria-label="Choose your operating system">
+                  <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="quick-mac-panel" id="quick-mac-tab" data-tab="mac">macOS</button>
+                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="quick-linux-panel" id="quick-linux-tab" data-tab="linux">Linux</button>
+                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="quick-windows-panel" id="quick-windows-tab" data-tab="windows">Windows</button>
                 </div>
               </div>
 
-              <div class="section-heading" style="margin-top: 1.75rem;">
-                <div>
-                  <h2>Windows</h2>
-                  <p>PowerShell — same flow</p>
+              <div class="install-card-body">
+                <div class="tab-panel active" id="quick-mac-panel" role="tabpanel" data-panel="mac" aria-labelledby="quick-mac-tab">
+                  <div class="terminal-panel command-terminal one-line-install">
+                    <div class="terminal-top">
+                      <span class="dot red" aria-hidden="true"></span>
+                      <span class="dot yellow" aria-hidden="true"></span>
+                      <span class="dot green" aria-hidden="true"></span>
+                      <span class="terminal-title">Terminal</span>
+                      <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy install command">
+                        <span class="copy-icon" aria-hidden="true"></span>
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    <div class="terminal-body">
+                      <code><span class="prompt" aria-hidden="true">$</span>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
+                    </div>
+                  </div>
+                  <p class="install-hint">Paste this in Terminal. The script checks for Rust, builds <code>guppty</code>, and leaves it on your PATH. You only run it once.</p>
+                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.sh" target="_blank" rel="noreferrer">Read install.sh first →</a>
+                </div>
+
+                <div class="tab-panel" id="quick-linux-panel" role="tabpanel" data-panel="linux" hidden aria-labelledby="quick-linux-tab">
+                  <div class="terminal-panel command-terminal one-line-install">
+                    <div class="terminal-top">
+                      <span class="dot red" aria-hidden="true"></span>
+                      <span class="dot yellow" aria-hidden="true"></span>
+                      <span class="dot green" aria-hidden="true"></span>
+                      <span class="terminal-title">Terminal</span>
+                      <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy install command">
+                        <span class="copy-icon" aria-hidden="true"></span>
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    <div class="terminal-body">
+                      <code><span class="prompt" aria-hidden="true">$</span>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
+                    </div>
+                  </div>
+                  <p class="install-hint">Paste this in your shell. The script checks for Rust, builds <code>guppty</code>, and leaves it on your PATH. You only run it once.</p>
+                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.sh" target="_blank" rel="noreferrer">Read install.sh first →</a>
+                </div>
+
+                <div class="tab-panel" id="quick-windows-panel" role="tabpanel" data-panel="windows" hidden aria-labelledby="quick-windows-tab">
+                  <div class="terminal-panel command-terminal one-line-install">
+                    <div class="terminal-top">
+                      <span class="dot red" aria-hidden="true"></span>
+                      <span class="dot yellow" aria-hidden="true"></span>
+                      <span class="dot green" aria-hidden="true"></span>
+                      <span class="terminal-title">PowerShell</span>
+                      <button class="copy-button" type="button" data-copy="irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex" aria-label="Copy Windows install command">
+                        <span class="copy-icon" aria-hidden="true"></span>
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                    <div class="terminal-body">
+                      <code><span class="prompt" aria-hidden="true">PS&gt;</span>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code>
+                    </div>
+                  </div>
+                  <p class="install-hint">Run this in PowerShell. Same flow as macOS and Linux: Rust if needed, then the <code>guppty</code> CLI on your PATH.</p>
+                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.ps1" target="_blank" rel="noreferrer">Read install.ps1 first →</a>
                 </div>
               </div>
+            </div>
 
-              <div class="terminal-panel command-terminal one-line-install">
-                <div class="terminal-top" aria-hidden="true">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
+            <details class="source-fold" id="from-source">
+              <summary>
+                <span>
+                  <strong>Build from source</strong>
+                  <span>Clone the repo and install with Cargo</span>
+                </span>
+              </summary>
+
+              <div class="source-fold-body tab-group" data-tab-group="from-source">
+                <p>Prefer to clone and build it yourself? Pick your OS, then follow the steps. You'll need Git and Rust.</p>
+
+                <div class="tabs" role="tablist" aria-label="Operating system source install commands">
+                  <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="mac-panel" id="source-mac-tab" data-tab="mac">macOS</button>
+                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="linux-panel" id="source-linux-tab" data-tab="linux">Linux</button>
+                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="windows-panel" id="source-windows-tab" data-tab="windows">Windows</button>
                 </div>
-                <div class="terminal-body">
-                  <code>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code>
-                  <button class="copy-button" type="button" data-copy="irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex" aria-label="Copy Windows install command">
-                    <span class="copy-icon" aria-hidden="true"></span>
-                    <span>Copy</span>
-                  </button>
-                </div>
-              </div>
 
-              <div class="section-heading" style="margin-top: 2rem;">
-                <div>
-                  <h2>Write your first program</h2>
-                  <p>After install — three commands</p>
-                </div>
-                <div class="status-chip">.gup files</div>
-              </div>
-
-              <p>Create a program, check it compiles, then run it. Every Guppty source file ends in <code>.gup</code>.</p>
-
-              <div class="terminal-panel command-terminal">
-                <div class="terminal-top" aria-hidden="true">
-                  <span class="dot red"></span>
-                  <span class="dot yellow"></span>
-                  <span class="dot green"></span>
-                </div>
-                <div class="terminal-body">
-                  <code>guppty new hello
-guppty compile hello.gup
-guppty hello.gup</code>
-                  <button class="copy-button" type="button" data-copy="guppty new hello
-guppty compile hello.gup
-guppty hello.gup" aria-label="Copy create compile run commands">
-                    <span class="copy-icon" aria-hidden="true"></span>
-                    <span>Copy</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="section-heading" style="margin-top: 2.25rem;">
-                <div>
-                  <h2>Manual install</h2>
-                  <p>If you prefer doing it yourself</p>
-                </div>
-                <div class="status-chip">Rust + Cargo</div>
-              </div>
-
-              <p>Want to clone the repo and build by hand? Pick your OS below. The one-line installer above is still the fastest way on macOS and Linux.</p>
-
-              <div class="tabs" role="tablist" aria-label="Operating system install commands">
-                <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="mac-panel" data-tab="mac">macOS</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="linux-panel" data-tab="linux">Linux</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="windows-panel" data-tab="windows">Windows</button>
-              </div>
-
-              <div class="tab-panel active" id="mac-panel" role="tabpanel" data-panel="mac">
+              <div class="tab-panel active" id="mac-panel" role="tabpanel" data-panel="mac" aria-labelledby="source-mac-tab">
                 <ol class="install-list">
                   <li>
                     <p>Install Rust with rustup. Restart your terminal when it finishes so <code>cargo</code> is on your PATH.</p>
@@ -235,7 +228,7 @@ guppty hello.gup" aria-label="Copy create compile run commands">
                 </ol>
               </div>
 
-              <div class="tab-panel" id="linux-panel" role="tabpanel" data-panel="linux" hidden>
+              <div class="tab-panel" id="linux-panel" role="tabpanel" data-panel="linux" hidden aria-labelledby="source-linux-tab">
                 <ol class="install-list">
                   <li>
                     <p>Install Rust with rustup. Open a new terminal when done.</p>
@@ -290,7 +283,7 @@ guppty hello.gup" aria-label="Copy create compile run commands">
                 </ol>
               </div>
 
-              <div class="tab-panel" id="windows-panel" role="tabpanel" data-panel="windows" hidden>
+              <div class="tab-panel" id="windows-panel" role="tabpanel" data-panel="windows" hidden aria-labelledby="source-windows-tab">
                 <ol class="install-list">
                   <li>
                     <p>Install Rust with winget. Close and reopen your terminal afterward.</p>
@@ -344,7 +337,8 @@ guppty hello.gup" aria-label="Copy create compile run commands">
                   </li>
                 </ol>
               </div>
-            </div>
+              </div>
+            </details>
           </section>
 
           <section class="docs-section" id="quick-start">
@@ -357,25 +351,12 @@ guppty hello.gup" aria-label="Copy create compile run commands">
             </div>
 
             <p>
-              Install once with the one-line command, then use these four steps every time you want to write something new. After install, <code>guppty</code> stays on your machine — you don't need to reinstall.
+              After <a href="#installation">install</a>, <code>guppty</code> stays on your machine. Use these three commands whenever you want to write something new.
             </p>
 
             <div class="steps">
               <article class="step-card">
                 <span class="step-number">1</span>
-                <h3>Install (one time)</h3>
-                <p>Checks for Rust, installs it if needed, builds Guppty, and runs a quick test.</p>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top" aria-hidden="true"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-                  <div class="terminal-body">
-                    <code>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
-                    <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                </div>
-              </article>
-
-              <article class="step-card">
-                <span class="step-number">2</span>
                 <h3>Create a program</h3>
                 <p>Scaffolds a starter <code>hello.gup</code> file in your current folder.</p>
                 <div class="terminal-panel command-terminal">
@@ -388,7 +369,7 @@ guppty hello.gup" aria-label="Copy create compile run commands">
               </article>
 
               <article class="step-card">
-                <span class="step-number">3</span>
+                <span class="step-number">2</span>
                 <h3>Compile it</h3>
                 <p>Checks your code for errors without running it. Good habit before you execute.</p>
                 <div class="terminal-panel command-terminal">
@@ -401,7 +382,7 @@ guppty hello.gup" aria-label="Copy create compile run commands">
               </article>
 
               <article class="step-card">
-                <span class="step-number">4</span>
+                <span class="step-number">3</span>
                 <h3>Run it</h3>
                 <p>Compiles to bytecode and runs on the VM. Edit your file, save, run again.</p>
                 <div class="terminal-panel command-terminal">
@@ -417,30 +398,12 @@ guppty hello.gup" aria-label="Copy create compile run commands">
 
           <section class="docs-section" id="download">
             <p class="eyebrow">Download</p>
-            <h2>Get Guppty</h2>
+            <h2>Source ZIP</h2>
             <p>
-              The easiest way: run the one-line installer once. It handles Rust and leaves <code>guppty</code> on your PATH so you can write programs anytime.
+              Want the repo as a ZIP instead of cloning? Download it, unzip, then run <code>cargo install --path .</code> inside (you'll need Rust). The <a href="#installation">installer</a> is still the fastest path if you just want the <code>guppty</code> command.
             </p>
-
-            <div class="terminal-panel command-terminal one-line-install">
-              <div class="terminal-top" aria-hidden="true"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-              <div class="terminal-body">
-                <code>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
-                <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-              </div>
-            </div>
-
-            <p style="margin-top: 1rem;">Windows PowerShell:</p>
-            <div class="terminal-panel command-terminal one-line-install">
-              <div class="terminal-top" aria-hidden="true"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-              <div class="terminal-body">
-                <code>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code>
-                <button class="copy-button" type="button" data-copy="irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-              </div>
-            </div>
-
-            <p style="margin-top: 1.25rem;">
-              Prefer a ZIP? Download the source, unzip it, and run <code>cargo install --path .</code> inside (you'll need Rust). Prebuilt binaries without Rust are planned for a future release.
+            <p>
+              Prebuilt binaries without Rust are planned for a future release.
             </p>
 
             <div class="download-actions">
@@ -662,9 +625,8 @@ guppty hello.gup" aria-label="Copy create compile run commands">
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Language</p>
-                <h2>Syntax</h2>
+                <h2>Syntax <span class="status-chip">Indentation based</span></h2>
               </div>
-              <span class="status-chip">Indentation based</span>
             </div>
 
             <p>
@@ -812,7 +774,7 @@ out(factorial(5))</code></pre>
             </p>
 
             <div class="checklist">
-              <label><input type="checkbox" checked disabled> Install with the one-line script (or Rust from rustup.rs)</label>
+              <label><input type="checkbox" checked disabled> Install from the docs (or Rust from rustup.rs)</label>
               <label><input type="checkbox" checked disabled> Run <code>cargo test</code> before opening a PR</label>
               <label><input type="checkbox" checked disabled> Keep syntax keywords in <code>src/syntax.rs</code></label>
               <label><input type="checkbox" checked disabled> Don't commit <code>target/</code> build output</label>

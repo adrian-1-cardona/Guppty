@@ -299,11 +299,9 @@ pre code {
 }
 
 .hero {
-  min-height: 70vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .eyebrow {
@@ -333,6 +331,18 @@ h2 {
   font-size: clamp(1.5rem, 3.5vw, 2.1rem);
 }
 
+h2:has(.status-chip) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+h2 .status-chip {
+  top: 0;
+  margin-left: 10px;
+}
+
 h3 {
   font-size: 1.05rem;
   font-weight: 600;
@@ -355,9 +365,9 @@ p {
 
 .section-heading {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
@@ -365,18 +375,25 @@ p {
   margin-top: 6px;
 }
 
+.section-heading .ghost-link {
+  margin-left: auto;
+}
+
 .status-chip {
-  flex: none;
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 12px;
+  min-height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: #1f5c3f;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  vertical-align: middle;
+  position: relative;
+  top: -2px;
+  margin-left: 8px;
 }
 
 .callout {
@@ -395,6 +412,130 @@ p {
 
 .quick-install {
   max-width: 100%;
+}
+
+.install-card {
+  margin-top: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.install-card-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #f7f7f9;
+}
+
+.install-card-title h2 {
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.install-card-title p {
+  margin-top: 4px;
+  font-size: 0.88rem;
+}
+
+.install-card-bar .tabs {
+  margin: 0;
+  background: var(--bg-card);
+}
+
+.install-card-body {
+  padding: 18px 20px 20px;
+}
+
+.install-card .command-terminal {
+  margin-top: 0;
+}
+
+.install-hint {
+  margin-top: 12px;
+  font-size: 0.92rem;
+}
+
+.install-card-body .ghost-link {
+  margin-top: 8px;
+}
+
+.source-fold {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  scroll-margin-top: 24px;
+}
+
+.source-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  transition: background 120ms ease;
+}
+
+.source-fold > summary:hover {
+  background: var(--bg-page);
+}
+
+.source-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.source-fold > summary > span {
+  display: grid;
+  gap: 2px;
+}
+
+.source-fold > summary strong {
+  color: var(--text-primary);
+  font-size: 0.98rem;
+}
+
+.source-fold > summary > span > span {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.source-fold > summary::after {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid var(--text-secondary);
+  border-bottom: 1.5px solid var(--text-secondary);
+  transform: rotate(45deg);
+  transition: transform 180ms ease;
+}
+
+.source-fold[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.source-fold[open] > summary {
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.source-fold-body {
+  padding: 16px 20px 20px;
+}
+
+.source-fold-body > p {
+  margin-bottom: 14px;
 }
 
 /* ── Tabs ── */
@@ -459,6 +600,15 @@ p {
   padding: 12px 16px 0;
 }
 
+.terminal-title {
+  margin-left: auto;
+  color: #6d7588;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .dot {
   display: block;
   width: 11px;
@@ -489,14 +639,34 @@ p {
   min-width: 0;
   overflow-x: auto;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   color: #c8d0e0;
   background: transparent;
   padding: 0;
 }
 
+.prompt {
+  color: #6dd4a0;
+  margin-right: 0.65em;
+  user-select: none;
+}
+
+.one-line-install .terminal-top {
+  padding: 10px 12px 0 16px;
+}
+
+.one-line-install .terminal-title {
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.one-line-install .terminal-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .one-line-install .terminal-body code {
-  font-size: 0.82em;
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 .command-terminal {
@@ -1088,13 +1258,13 @@ p {
   }
 
   .hero {
-    min-height: auto;
-    padding-top: 16px;
+    padding-top: 8px;
   }
 
   .section-heading,
   .command-row,
-  .syntax-layout {
+  .syntax-layout,
+  .install-card-bar {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -1103,9 +1273,14 @@ p {
     gap: 10px;
   }
 
-  .status-chip,
-  .ghost-link {
+  .section-heading .ghost-link,
+  .status-chip {
+    margin-left: 0;
     justify-self: start;
+  }
+
+  .install-card-title h2 .status-chip {
+    margin-left: 8px;
   }
 
   .steps,

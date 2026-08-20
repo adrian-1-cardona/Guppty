@@ -33,35 +33,54 @@ sidebar?.addEventListener("click", (event) => {
   }
 });
 
-function activateTabs(buttonSelector, panelSelector, activeValue, buttonAttr, panelAttr) {
-  document.querySelectorAll(buttonSelector).forEach((button) => {
+function setTabGroup(group, activeValue, buttonSelector, panelSelector, buttonAttr, panelAttr) {
+  group.querySelectorAll(buttonSelector).forEach((button) => {
     const isActive = button.getAttribute(buttonAttr) === activeValue;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-selected", String(isActive));
   });
 
-  document.querySelectorAll(panelSelector).forEach((panel) => {
+  group.querySelectorAll(panelSelector).forEach((panel) => {
     const isActive = panel.getAttribute(panelAttr) === activeValue;
     panel.classList.toggle("active", isActive);
     panel.hidden = !isActive;
   });
 }
 
-document.querySelectorAll(".tab-button").forEach((button) => {
-  button.addEventListener("click", () => {
-    activateTabs(".tab-button", ".tab-panel", button.dataset.tab, "data-tab", "data-panel");
+function preferredOsTab() {
+  const platform = navigator.platform || "";
+  const ua = navigator.userAgent || "";
+  if (/Win/i.test(platform) || /Windows NT/i.test(ua)) return "windows";
+  if (/Linux/i.test(platform) && !/Android/i.test(ua)) return "linux";
+  return "mac";
+}
+
+document.querySelectorAll("[data-tab-group]").forEach((group) => {
+  group.querySelectorAll(".tab-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      setTabGroup(group, button.dataset.tab, ".tab-button", ".tab-panel", "data-tab", "data-panel");
+    });
   });
+
+  const os = preferredOsTab();
+  const match = group.querySelector(`.tab-button[data-tab="${os}"]`);
+  if (match) {
+    setTabGroup(group, os, ".tab-button", ".tab-panel", "data-tab", "data-panel");
+  }
 });
 
-document.querySelectorAll(".syntax-tab").forEach((button) => {
-  button.addEventListener("click", () => {
-    activateTabs(
-      ".syntax-tab",
-      ".syntax-panel",
-      button.dataset.syntax,
-      "data-syntax",
-      "data-syntax-panel"
-    );
+document.querySelectorAll(".syntax-layout").forEach((group) => {
+  group.querySelectorAll(".syntax-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      setTabGroup(
+        group,
+        button.dataset.syntax,
+        ".syntax-tab",
+        ".syntax-panel",
+        "data-syntax",
+        "data-syntax-panel"
+      );
+    });
   });
 });
 
@@ -138,6 +157,9 @@ function showDocPage(pageName, hash, scroll = true) {
 
   const target = document.querySelector(activeHash);
   if (target) {
+    if (target instanceof HTMLDetailsElement) {
+      target.open = true;
+    }
     content.scrollTo({ top: 0, behavior: "auto" });
     window.requestAnimationFrame(() => {
       target.scrollIntoView({ block: "start", behavior: "smooth" });
