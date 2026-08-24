@@ -1,95 +1,35 @@
-# =============================================================================
-# Guppty one-line installer (Windows PowerShell)
-# =============================================================================
-# Install with:
-#   irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex
-# =============================================================================
-
 $ErrorActionPreference = "Stop"
+$Repository = if ($env:GUPPTY_REPOSITORY) { $env:GUPPTY_REPOSITORY } else { "https://github.com/adrian-1-cardona/Guppty" }
 
-$RepoOwner = "adrian-1-cardona"
-$RepoName = "guppty"
-$RepoUrl = "https://github.com/$RepoOwner/$RepoName.git"
-$ZipUrl = "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/main.zip"
-$GupptyHome = if ($env:GUPPTY_HOME) { $env:GUPPTY_HOME } else { Join-Path $HOME ".guppty" }
-$SrcDir = Join-Path $GupptyHome "src"
-$CargoBin = if ($env:CARGO_HOME) { Join-Path $env:CARGO_HOME "bin" } else { Join-Path $HOME ".cargo\bin" }
+function Write-Step([string]$Message) {
+    Write-Host "`n$Message" -ForegroundColor Cyan
+}
 
-function Write-Info($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
-function Write-Ok($msg) { Write-Host "OK  $msg" -ForegroundColor Green }
-function Write-Warn($msg) { Write-Host "!   $msg" -ForegroundColor Yellow }
+Write-Step "Welcome to Guppty"
 
-Write-Host ""
-Write-Host "  Guppty fresh install" -ForegroundColor Cyan
-Write-Host "  write .gup  ·  compile  ·  run" -ForegroundColor DarkCyan
-Write-Host ""
-
-Write-Host "1. Checking for Rust" -ForegroundColor White
-$rustc = Get-Command rustc -ErrorAction SilentlyContinue
-$cargo = Get-Command cargo -ErrorAction SilentlyContinue
-
-if (-not $rustc -or -not $cargo) {
-  Write-Warn "Rust not found — installing via winget (Rustlang.Rustup)"
-  winget install --id Rustlang.Rustup -e --accept-source-agreements --accept-package-agreements
-  $env:Path = "$CargoBin;" + [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-  $rustc = Get-Command rustc -ErrorAction SilentlyContinue
-  $cargo = Get-Command cargo -ErrorAction SilentlyContinue
-  if (-not $rustc -or -not $cargo) {
-    throw "Rustup finished but rustc/cargo are still missing. Close this window, open a new PowerShell, and re-run the install command."
-  }
+$HasRust = (Get-Command rustc -ErrorAction SilentlyContinue) -and (Get-Command cargo -ErrorAction SilentlyContinue)
+if ($HasRust) {
+    Write-Step "Rust is already installed - keeping your current toolchain."
 } else {
-  Write-Ok "Rust already installed: $(rustc --version)"
-  Write-Ok "Cargo already installed: $(cargo --version)"
+    Write-Step "Rust was not found. Installing it with the official rustup installer..."
+    $Rustup = Join-Path $env:TEMP "guppty-rustup-init.exe"
+    Invoke-WebRequest "https://win.rustup.rs/x86_64" -OutFile $Rustup
+    Start-Process -FilePath $Rustup -ArgumentList "-y", "--profile", "minimal" -Wait -NoNewWindow
+    $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    Remove-Item $Rustup -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host ""
-Write-Host "2. Fetching a fresh Guppty source tree" -ForegroundColor White
-New-Item -ItemType Directory -Force -Path $GupptyHome | Out-Null
-if (Test-Path $SrcDir) { Remove-Item -Recurse -Force $SrcDir }
-
-$git = Get-Command git -ErrorAction SilentlyContinue
-if ($git) {
-  Write-Info "Cloning $RepoUrl"
-  git clone --depth 1 $RepoUrl $SrcDir
-} else {
-  Write-Warn "git not found — downloading source ZIP instead"
-  $zipPath = Join-Path $GupptyHome "guppty-main.zip"
-  Invoke-WebRequest -Uri $ZipUrl -OutFile $zipPath
-  Expand-Archive -Path $zipPath -DestinationPath $GupptyHome -Force
-  $extracted = Join-Path $GupptyHome "guppty-main"
-  if (-not (Test-Path $extracted)) {
-    $extracted = Join-Path $GupptyHome "Guppty-main"
-  }
-  Move-Item $extracted $SrcDir
-  Remove-Item $zipPath -Force
-}
-Write-Ok "Source ready at $SrcDir"
-
-Write-Host ""
-Write-Host "3. Building and installing the guppty CLI" -ForegroundColor White
-Push-Location $SrcDir
-try {
-  cargo install --path . --force
-} finally {
-  Pop-Location
-}
-Write-Ok "guppty installed to $CargoBin\guppty.exe"
-
-$env:Path = "$CargoBin;" + $env:Path
-Write-Host ""
-Write-Host "4. Verifying your install" -ForegroundColor White
-$demo = Join-Path $SrcDir "examples\hello.gup"
-if (Test-Path $demo) {
-  & "$CargoBin\guppty.exe" $demo
-  Write-Ok "Example ran successfully"
+if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+    throw "Cargo is not available yet. Restart PowerShell and run the installer again."
 }
 
-Write-Host ""
-Write-Host "Guppty is ready." -ForegroundColor Green
-Write-Host ""
-Write-Host "Create a program:  guppty new hello"
-Write-Host "Compile it:        guppty compile hello.gup"
-Write-Host "Run it:            guppty hello.gup"
-Write-Host "Help:              guppty help"
-Write-Host ""
-Write-Host "If guppty is not found in a new terminal, reopen PowerShell so PATH picks up $CargoBin"
+Write-Step "Downloading and building the latest Guppty command..."
+cargo install --git $Repository --locked --force guppty
+if ($LASTEXITCODE -ne 0) { throw "Cargo could not install Guppty." }
+
+$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+Write-Step "Guppty $(guppty --version) is ready!"
+Write-Host "Create your first program with:"
+Write-Host "  guppty new hello-guppty"
+Write-Host "  cd hello-guppty"
+Write-Host "  guppty run"

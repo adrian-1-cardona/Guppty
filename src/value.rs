@@ -7,15 +7,15 @@ use crate::environment::GuppyFunction;
 
 #[derive(Debug, Clone)]
 pub enum Value {
-  GuppyString(String),
-  GuppyChar(char),
-  GuppyNumber(i64),
-  GuppyFloat(f64),
-  GuppyBool(bool),
-  GuppyArray(Vec<Value>),
-  GuppyFunction(GuppyFunction),
-  GuppyClosure(ClosureValue),
-  Nothing,
+    GuppyString(String),
+    GuppyChar(char),
+    GuppyNumber(i64),
+    GuppyFloat(f64),
+    GuppyBool(bool),
+    GuppyArray(Vec<Value>),
+    GuppyFunction(GuppyFunction),
+    GuppyClosure(ClosureValue),
+    Nothing,
 }
 
 impl Value {
