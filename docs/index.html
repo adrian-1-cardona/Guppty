@@ -74,7 +74,7 @@
         <div class="doc-page active" data-doc-page-panel="getting-started">
 
           <section class="hero docs-section" id="installation">
-            <p class="eyebrow">Getting Started · v0.1.0</p>
+            <p class="eyebrow">Getting Started · v0.2.0</p>
             <h1>Get Guppty on your machine</h1>
             <p class="hero-copy">
               I built Guppty in Rust — a small language where you write <code>.gup</code> files, compile them to bytecode, and run them from the terminal. The whole compiler fits in one repo you can read in an afternoon.
@@ -367,36 +367,36 @@
             <h2>Quick Start</h2>
 
             <p>
-              Once you've <a href="#installation">installed</a>, <code>guppty</code> stays on your machine. These three commands are the everyday workflow — create, check, run.
+              Once you've <a href="#installation">installed</a>, <code>guppty</code> stays on your machine. These four steps take a new project from an empty folder to a standalone executable.
             </p>
 
             <div class="steps">
               <article class="step-card">
                 <span class="step-number">1</span>
-                <h3>Create a program</h3>
-                <p>Scaffolds a starter <code>hello.gup</code> in your current folder.</p>
+                <h3>Create a project</h3>
+                <p>Creates <code>hello/guppty.toml</code> and a starter <code>hello/src/main.gup</code>.</p>
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
                     <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty new hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                    <button class="copy-button" type="button" data-copy="guppty new hello &amp;&amp; cd hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
                   </div>
                   <div class="terminal-body">
-                    <code>guppty new hello</code>
+                    <code>guppty new hello &amp;&amp; cd hello</code>
                   </div>
                 </div>
               </article>
 
               <article class="step-card">
                 <span class="step-number">2</span>
-                <h3>Compile it</h3>
-                <p>Checks for errors without running. I do this before every run.</p>
+                <h3>Check it</h3>
+                <p>Reads the project entry file and checks for errors without running it.</p>
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
                     <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty compile hello.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                    <button class="copy-button" type="button" data-copy="guppty check" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
                   </div>
                   <div class="terminal-body">
-                    <code>guppty compile hello.gup</code>
+                    <code>guppty check</code>
                   </div>
                 </div>
               </article>
@@ -408,10 +408,25 @@
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
                     <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty hello.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                    <button class="copy-button" type="button" data-copy="guppty run" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
                   </div>
                   <div class="terminal-body">
-                    <code>guppty hello.gup</code>
+                    <code>guppty run</code>
+                  </div>
+                </div>
+              </article>
+
+              <article class="step-card">
+                <span class="step-number">4</span>
+                <h3>Build it</h3>
+                <p>Packages the runtime and source into a standalone executable in <code>build/</code>.</p>
+                <div class="terminal-panel command-terminal">
+                  <div class="terminal-top">
+                    <span class="terminal-title">Shell</span>
+                    <button class="copy-button" type="button" data-copy="guppty build" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                  </div>
+                  <div class="terminal-body">
+                    <code>guppty build</code>
                   </div>
                 </div>
               </article>
@@ -438,7 +453,7 @@
             <p class="eyebrow">Terminal</p>
             <h2>CLI Commands</h2>
             <p>
-              After install you get a small toolkit. I mostly just run <code>guppty yourfile.gup</code> — create and compile when I'm starting something new or want to catch errors early.
+              After install you get a small project toolkit. Commands without a filename read the entry path from <code>guppty.toml</code>, while direct <code>.gup</code> file execution remains available.
             </p>
             <p>
               Add <code>--interp</code> to run through the tree-walking interpreter instead of the VM. Both backends should match; the flag is there if you want to compare them.
@@ -448,7 +463,7 @@
               <article class="command-row">
                 <div>
                   <h3>guppty new</h3>
-                  <p>Creates a starter <code>.gup</code> file in the current folder.</p>
+                  <p>Creates a project folder with a manifest and <code>src/main.gup</code>.</p>
                 </div>
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
@@ -463,16 +478,16 @@
 
               <article class="command-row">
                 <div>
-                  <h3>guppty compile</h3>
-                  <p>Compile-check without running. Shows bytecode size or a readable error.</p>
+                  <h3>guppty check</h3>
+                  <p>Lexes, parses, and compiles the project without executing it.</p>
                 </div>
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
                     <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty compile hello.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                    <button class="copy-button" type="button" data-copy="guppty check" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
                   </div>
                   <div class="terminal-body">
-                    <code>guppty compile hello.gup</code>
+                    <code>guppty check</code>
                   </div>
                 </div>
               </article>
@@ -480,15 +495,31 @@
               <article class="command-row">
                 <div>
                   <h3>guppty run</h3>
-                  <p>Compile and execute on the VM. You can also just pass the file path.</p>
+                  <p>Compile and execute the project on the VM. You can also pass a file path.</p>
                 </div>
                 <div class="terminal-panel command-terminal">
                   <div class="terminal-top">
                     <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty hello.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                    <button class="copy-button" type="button" data-copy="guppty run" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
                   </div>
                   <div class="terminal-body">
-                    <code>guppty hello.gup</code>
+                    <code>guppty run</code>
+                  </div>
+                </div>
+              </article>
+
+              <article class="command-row">
+                <div>
+                  <h3>guppty build</h3>
+                  <p>Builds a standalone executable, with <code>--output</code> available for a custom path.</p>
+                </div>
+                <div class="terminal-panel command-terminal">
+                  <div class="terminal-top">
+                    <span class="terminal-title">Shell</span>
+                    <button class="copy-button" type="button" data-copy="guppty build --output dist/hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
+                  </div>
+                  <div class="terminal-body">
+                    <code>guppty build --output dist/hello</code>
                   </div>
                 </div>
               </article>
@@ -841,7 +872,7 @@ out(factorial(5))</code></pre>
               </div>
               <div class="issue-card">
                 <h4>Can't read my file</h4>
-                <p>Create one with <code>guppty new my_program</code>, or pass the full path: <code>guppty ./my_program.gup</code>.</p>
+                <p>Create a project with <code>guppty new my_program</code>, or pass a full source path: <code>guppty ./my_program.gup</code>.</p>
               </div>
               <div class="issue-card">
                 <h4>Indentation looks wrong</h4>
@@ -849,7 +880,7 @@ out(factorial(5))</code></pre>
               </div>
               <div class="issue-card">
                 <h4>How do I verify everything works?</h4>
-                <p>Run <code>guppty compile hello.gup</code> on your own program, or <code>cargo test</code> from a source checkout.</p>
+                <p>Run <code>guppty check</code> inside your project, or <code>cargo test</code> from a source checkout.</p>
               </div>
             </div>
           </section>
@@ -862,8 +893,8 @@ out(factorial(5))</code></pre>
             <div class="release-list">
               <article>
                 <span class="release-label">Latest</span>
-                <h3>One-line install + your own programs</h3>
-                <p>Install from one terminal command on macOS, Linux, and Windows. The CLI now has <code>guppty new</code>, <code>guppty compile</code>, <code>guppty run</code>, and <code>guppty help</code> so you can create and run <code>.gup</code> files right away.</p>
+                <h3>Version 0.2.0 · project toolchain</h3>
+                <p>Install from one terminal command, create manifest-backed projects, check and run their entry files, and build standalone native executables.</p>
               </article>
               <article>
                 <span class="release-label muted">v0.1.0</span>

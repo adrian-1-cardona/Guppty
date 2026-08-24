@@ -35,20 +35,21 @@ fn guppty_help_prints_usage() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("guppty new"));
-    assert!(stdout.contains("guppty compile"));
+    assert!(stdout.contains("guppty check"));
     assert!(stdout.contains("guppty run"));
+    assert!(stdout.contains("guppty build"));
 }
 
 #[test]
-fn guppty_new_creates_a_gup_program() {
+fn guppty_new_creates_a_project() {
     let bin = env!("CARGO_BIN_EXE_guppty");
     let mut dir = std::env::temp_dir();
     dir.push(format!("guppty-new-{}", process::id()));
     fs::create_dir_all(&dir).expect("temp dir");
 
     let mut path = dir.clone();
-    path.push("fresh.gup");
-    let _ = fs::remove_file(&path);
+    path.push("fresh");
+    let _ = fs::remove_dir_all(&path);
 
     let output = Command::new(bin)
         .args(["new", "fresh"])
@@ -61,27 +62,27 @@ fn guppty_new_creates_a_gup_program() {
         "stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(path.exists(), "expected {}", path.display());
-    let source = fs::read_to_string(&path).expect("read new file");
+    assert!(path.join("guppty.toml").is_file());
+    let source_path = path.join("src/main.gup");
+    assert!(source_path.is_file(), "expected {}", source_path.display());
+    let source = fs::read_to_string(&source_path).expect("read new file");
     assert!(source.contains("out("));
     assert!(source.contains("//"));
-    assert!(source.contains(".gup"));
 
-    let _ = fs::remove_file(&path);
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn guppty_compile_checks_a_program_without_running() {
+fn guppty_check_checks_a_program_without_running() {
     let bin = env!("CARGO_BIN_EXE_guppty");
     let mut path = std::env::temp_dir();
-    path.push(format!("guppty-compile-{}.gup", process::id()));
-    fs::write(&path, "out(\"compile me\")\n").expect("write");
+    path.push(format!("guppty-check-{}.gup", process::id()));
+    fs::write(&path, "out(\"check me\")\n").expect("write");
 
     let output = Command::new(bin)
-        .args(["compile", path.to_str().unwrap()])
+        .args(["check", path.to_str().unwrap()])
         .output()
-        .expect("failed to run guppty compile");
+        .expect("failed to run guppty check");
 
     let _ = fs::remove_file(&path);
 
@@ -91,10 +92,9 @@ fn guppty_compile_checks_a_program_without_running() {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Compiled"));
-    assert!(stdout.contains("bytecode"));
-    // compile should not execute out()
-    assert!(!stdout.contains("compile me"));
+    assert!(stdout.contains("is ready"));
+    // check should not execute out()
+    assert!(!stdout.contains("check me"));
 }
 
 #[test]

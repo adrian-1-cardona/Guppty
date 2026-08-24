@@ -382,8 +382,11 @@ mod tests {
             ErrorKind::MathError
         );
         assert_eq!(
-            GupError::parse(Span::new(1, 1, 1), "Expected an indented block but found end of file.")
-                .kind,
+            GupError::parse(
+                Span::new(1, 1, 1),
+                "Expected an indented block but found end of file."
+            )
+            .kind,
             ErrorKind::IndentationError
         );
         assert_eq!(
