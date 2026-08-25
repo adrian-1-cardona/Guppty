@@ -11,11 +11,18 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#documentation">Skip to content</a>
+
     <header class="site-header">
       <div class="wrap">
-        <a class="site-title" href="index.html">Guppty</a>
+        <a class="site-title" href="index.html">
+          <span class="mark" aria-hidden="true">g</span>
+          Guppty
+        </a>
         <nav class="site-nav" aria-label="Site navigation">
           <a href="#documentation">Documentation</a>
+          <a href="#commands">Commands</a>
+          <a href="#language">Language</a>
           <a href="#downloads">Downloads</a>
           <a href="https://github.com/adrian-1-cardona/Guppty">Source</a>
         </nav>
@@ -23,60 +30,141 @@
     </header>
 
     <div class="wrap page">
-      <aside class="sidebar" aria-label="Contents">
-        <h2>Contents</h2>
-        <ul>
-          <li><a href="#documentation">Documentation</a></li>
-          <li><a href="#installing">Installing Guppty</a></li>
-          <li><a href="#from-source">Building from source</a></li>
-          <li><a href="#quick-start">Quick start</a></li>
-          <li><a href="#downloads">Downloads</a></li>
-          <li><a href="#commands">Command reference</a></li>
-          <li><a href="#language">Language reference</a></li>
-          <li><a href="#examples">Example programs</a></li>
-          <li><a href="#about">About Guppty</a></li>
-          <li><a href="#internals">How it works</a></li>
-          <li><a href="#benchmarks">Benchmarks</a></li>
-          <li><a href="#contributing">Contributing</a></li>
-          <li><a href="#troubleshooting">Troubleshooting</a></li>
-          <li><a href="#releases">Release notes</a></li>
-        </ul>
+      <main class="content" id="content">
+        <p class="kicker">Guppty 0.2.0</p>
+        <h1 id="documentation">Documentation</h1>
 
-        <h2>Reference</h2>
-        <ul>
-          <li><a href="#cmd-new">guppty new</a></li>
-          <li><a href="#cmd-check">guppty check</a></li>
-          <li><a href="#cmd-run">guppty run</a></li>
-          <li><a href="#cmd-build">guppty build</a></li>
-          <li><a href="#cmd-help">guppty help</a></li>
-          <li><a href="#cmd-interp">--interp</a></li>
-        </ul>
-      </aside>
-
-      <main class="content">
-        <h1 id="documentation">Guppty Documentation</h1>
-
-        <p>
+        <p class="lede">
           Guppty is a small indentation-based programming language written in Rust. You write
-          <code>.gup</code> files, and the <code>guppty</code> command compiles them to bytecode and runs
-          them on a stack virtual machine. A tree-walking interpreter is also included as a second
+          <code>.gup</code> files, and the <code>guppty</code> command compiles them to bytecode and
+          runs them on a stack virtual machine. A tree-walking interpreter is included as a second
           backend.
         </p>
 
         <p>
-          This page documents installation, the command-line interface, the language itself, and the
-          internals. The current version is 0.2.0.
+          This page is the full reference: install the CLI, write <code>.gup</code> programs, and
+          look up every command. Jump from the lists below, or read it through.
         </p>
+
+        <div class="ref-index" aria-label="Quick reference">
+          <section>
+            <h2>Setup</h2>
+            <dl>
+              <div>
+                <dt><a href="#installing">install</a></dt>
+                <dd>One-line install for macOS, Linux, and Windows.</dd>
+              </div>
+              <div>
+                <dt><a href="#from-source">from source</a></dt>
+                <dd>Clone the repo and install with Cargo.</dd>
+              </div>
+              <div>
+                <dt><a href="#quick-start">quick start</a></dt>
+                <dd>Create, check, run, and build a project.</dd>
+              </div>
+              <div>
+                <dt><a href="#downloads">downloads</a></dt>
+                <dd>Source zip; prebuilt binaries are planned.</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h2>Commands</h2>
+            <dl>
+              <div>
+                <dt><a href="#cmd-new">guppty new</a></dt>
+                <dd>Create a project with a manifest and starter file.</dd>
+              </div>
+              <div>
+                <dt><a href="#cmd-check">guppty check</a></dt>
+                <dd>Lex, parse, and compile without running.</dd>
+              </div>
+              <div>
+                <dt><a href="#cmd-run">guppty run</a></dt>
+                <dd>Compile and execute on the virtual machine.</dd>
+              </div>
+              <div>
+                <dt><a href="#cmd-build">guppty build</a></dt>
+                <dd>Package a standalone native executable.</dd>
+              </div>
+              <div>
+                <dt><a href="#cmd-help">guppty help</a></dt>
+                <dd>List every subcommand and its usage.</dd>
+              </div>
+              <div>
+                <dt><a href="#cmd-interp">--interp</a></dt>
+                <dd>Use the tree-walking interpreter instead.</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h2>Language</h2>
+            <dl>
+              <div>
+                <dt><a href="#lang-variables">variables</a></dt>
+                <dd>Assignment, types, and <code>out()</code>.</dd>
+              </div>
+              <div>
+                <dt><a href="#lang-control-flow">control flow</a></dt>
+                <dd>Indentation, <code>if</code>/<code>else</code>, and <code>for</code>.</dd>
+              </div>
+              <div>
+                <dt><a href="#lang-functions">functions</a></dt>
+                <dd>Named functions and <code>return</code>.</dd>
+              </div>
+              <div>
+                <dt><a href="#lang-closures">closures</a></dt>
+                <dd>Nested functions that keep their enclosing scope.</dd>
+              </div>
+              <div>
+                <dt><a href="#examples">examples</a></dt>
+                <dd>Runnable programs that double as tests.</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h2>Project</h2>
+            <dl>
+              <div>
+                <dt><a href="#about">about</a></dt>
+                <dd>What Guppty is for, and what it is not.</dd>
+              </div>
+              <div>
+                <dt><a href="#internals">how it works</a></dt>
+                <dd>Lexer, parser, compiler, and virtual machine.</dd>
+              </div>
+              <div>
+                <dt><a href="#benchmarks">benchmarks</a></dt>
+                <dd>VM versus interpreter on a small program.</dd>
+              </div>
+              <div>
+                <dt><a href="#contributing">contributing</a></dt>
+                <dd>Tests, examples, and pull requests.</dd>
+              </div>
+              <div>
+                <dt><a href="#troubleshooting">troubleshooting</a></dt>
+                <dd>Installer, PATH, and indentation errors.</dd>
+              </div>
+              <div>
+                <dt><a href="#releases">release notes</a></dt>
+                <dd>0.1.0, 0.2.0, and what is still unreleased.</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
 
         <h2 id="installing">Installing Guppty</h2>
 
         <p>
           The install script checks for a Rust toolchain, installs it with rustup if it is missing,
-          builds <code>guppty</code>, and places the binary on your <code>PATH</code>. You only need to
-          run it once.
+          builds <code>guppty</code>, and places the binary on your <code>PATH</code>. You only need
+          to run it once.
         </p>
 
-        <h3>macOS and Linux</h3>
+        <h3 id="install-unix">macOS and Linux</h3>
 
         <pre><code>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code></pre>
 
@@ -86,7 +174,7 @@
           before running it if you would rather know what it does first.
         </p>
 
-        <h3>Windows</h3>
+        <h3 id="install-windows">Windows</h3>
 
         <pre><code>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code></pre>
 
@@ -96,14 +184,22 @@
           <a href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.ps1">install.ps1</a>.
         </p>
 
+        <div class="note">
+          <p>
+            <strong>Just installed Rust?</strong> Open a new terminal so that
+            <code>~/.cargo/bin</code> is on your <code>PATH</code>, then run
+            <code>guppty help</code> to confirm the command is available.
+          </p>
+        </div>
+
         <h2 id="from-source">Building from source</h2>
 
         <p>
-          You need Git and Rust. Install Rust from <a href="https://rustup.rs">rustup.rs</a>, then open a
-          new terminal so that <code>cargo</code> is on your <code>PATH</code>.
+          You need Git and Rust. Install Rust from <a href="https://rustup.rs">rustup.rs</a>, then
+          open a new terminal so that <code>cargo</code> is on your <code>PATH</code>.
         </p>
 
-        <h3>macOS and Linux</h3>
+        <h3 id="source-unix">macOS and Linux</h3>
 
         <pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://github.com/adrian-1-cardona/Guppty.git
@@ -111,7 +207,7 @@ cd Guppty
 cargo install --path .
 guppty examples/program.gup</code></pre>
 
-        <h3>Windows</h3>
+        <h3 id="source-windows">Windows</h3>
 
         <pre><code>winget install Rustlang.Rustup
 git clone https://github.com/adrian-1-cardona/Guppty.git
@@ -127,31 +223,44 @@ guppty .\examples\program.gup</code></pre>
         <h2 id="quick-start">Quick start</h2>
 
         <p>
-          These four commands take an empty directory to a standalone executable. Commands that are not
-          given a filename read the entry path from <code>guppty.toml</code>.
+          These four commands take an empty directory to a standalone executable. Commands that are
+          not given a filename read the entry path from <code>guppty.toml</code>.
         </p>
 
-        <dl>
-          <dt><code>guppty new hello &amp;&amp; cd hello</code></dt>
-          <dd>Creates <code>hello/guppty.toml</code> and a starter <code>hello/src/main.gup</code>.</dd>
+        <ol class="steps">
+          <li>
+            <p>Create the project. This writes a manifest and a starter source file.</p>
+            <pre><code>guppty new hello &amp;&amp; cd hello</code></pre>
+          </li>
+          <li>
+            <p>Check it. Reports errors without running the program.</p>
+            <pre><code>guppty check</code></pre>
+          </li>
+          <li>
+            <p>Run it. Compiles to bytecode and executes it on the virtual machine.</p>
+            <pre><code>guppty run</code></pre>
+          </li>
+          <li>
+            <p>Build it. Packages the runtime and source into a standalone executable.</p>
+            <pre><code>guppty build</code></pre>
+          </li>
+        </ol>
 
-          <dt><code>guppty check</code></dt>
-          <dd>Reads the project entry file and reports errors without running the program.</dd>
+        <p><code>guppty new</code> lays out the project like this:</p>
 
-          <dt><code>guppty run</code></dt>
-          <dd>Compiles to bytecode and executes it on the virtual machine.</dd>
-
-          <dt><code>guppty build</code></dt>
-          <dd>Packages the runtime and source into a standalone executable under <code>build/</code>.</dd>
-        </dl>
+        <pre><code>hello/
+├── guppty.toml
+└── src/
+    └── main.gup</code></pre>
 
         <h2 id="downloads">Downloads</h2>
 
         <p>
           The repository is available as a
           <a href="https://github.com/adrian-1-cardona/Guppty/archive/refs/heads/main.zip">source ZIP</a>.
-          Unpack it and run <code>cargo install --path .</code> inside the directory; this requires Rust.
-          The install script above is the shorter path if you only want the <code>guppty</code> command.
+          Unpack it and run <code>cargo install --path .</code> inside the directory; this requires
+          Rust. The install script above is the shorter path if you only want the
+          <code>guppty</code> command.
         </p>
 
         <p>Prebuilt binaries that do not require Rust are planned for a future release.</p>
@@ -162,6 +271,33 @@ guppty .\examples\program.gup</code></pre>
           All commands accept an optional <code>.gup</code> file path instead of reading the project
           manifest.
         </p>
+
+        <dl class="commands">
+          <div>
+            <dt><a href="#cmd-new">guppty new</a></dt>
+            <dd>Create a project directory with a manifest and <code>src/main.gup</code>.</dd>
+          </div>
+          <div>
+            <dt><a href="#cmd-check">guppty check</a></dt>
+            <dd>Lex, parse, and compile the project without executing it.</dd>
+          </div>
+          <div>
+            <dt><a href="#cmd-run">guppty run</a></dt>
+            <dd>Compile and execute the project on the virtual machine.</dd>
+          </div>
+          <div>
+            <dt><a href="#cmd-build">guppty build</a></dt>
+            <dd>Build a standalone native executable under <code>build/</code>.</dd>
+          </div>
+          <div>
+            <dt><a href="#cmd-help">guppty help</a></dt>
+            <dd>List every subcommand and its usage.</dd>
+          </div>
+          <div>
+            <dt><a href="#cmd-interp">--interp</a></dt>
+            <dd>Run through the tree-walking interpreter instead of the virtual machine.</dd>
+          </div>
+        </dl>
 
         <h3 id="cmd-new">guppty new</h3>
         <p>Creates a project directory containing a manifest and <code>src/main.gup</code>.</p>
@@ -193,20 +329,20 @@ guppty build --output dist/hello</code></pre>
         </p>
         <pre><code>guppty hello.gup --interp</code></pre>
 
-        <h3>cargo run</h3>
+        <h3 id="cmd-cargo">cargo run</h3>
         <p>When working on Guppty itself, run the compiler without reinstalling the binary.</p>
         <pre><code>cargo run -- examples/program.gup</code></pre>
 
         <h2 id="language">Language reference</h2>
 
         <p>
-          Blocks are delimited by indentation; there are no curly braces or semicolons. Use four spaces
-          per level and do not mix tabs and spaces. Variables are created by assignment, with no
-          <code>let</code> or <code>var</code> keyword. The available types are integers, floats, strings,
-          chars, booleans, and arrays. <code>out()</code> prints a value.
+          Blocks are delimited by indentation; there are no curly braces or semicolons. Use four
+          spaces per level and do not mix tabs and spaces. Variables are created by assignment, with
+          no <code>let</code> or <code>var</code> keyword. The available types are integers, floats,
+          strings, chars, booleans, and arrays. <code>out()</code> prints a value.
         </p>
 
-        <h3>Variables and output</h3>
+        <h3 id="lang-variables">Variables and output</h3>
         <pre><code>x = 5
 name = "Guppty"
 ready = true
@@ -214,7 +350,7 @@ letter = 'g'
 out(name)
 out(x + 10)</code></pre>
 
-        <h3>Control flow</h3>
+        <h3 id="lang-control-flow">Control flow</h3>
         <p>
           Indent the body under the keyword. <code>for</code> loops take a range written as
           <code>range(1 through 3)</code>.
@@ -228,14 +364,17 @@ else
 for i in range(1 through 3)
     out(i)</code></pre>
 
-        <h3>Functions</h3>
-        <p>Write the name and parameters on one line, then indent the body. <code>return</code> sends a value back.</p>
+        <h3 id="lang-functions">Functions</h3>
+        <p>
+          Write the name and parameters on one line, then indent the body. <code>return</code> sends
+          a value back.
+        </p>
         <pre><code>add(a, b)
     return a + b
 
 out(add(2, 3))</code></pre>
 
-        <h3>Closures</h3>
+        <h3 id="lang-closures">Closures</h3>
         <p>A function defined inside another function keeps access to the enclosing scope.</p>
         <pre><code>makeAdder(x)
     addIt(y)
@@ -245,7 +384,7 @@ out(add(2, 3))</code></pre>
 adder = makeAdder(5)
 out(adder(3))</code></pre>
 
-        <h3>Comments</h3>
+        <h3 id="lang-comments">Comments</h3>
         <p>Everything after <code>//</code> on a line is ignored.</p>
         <pre><code>// this is a comment
 out(42) // inline comment</code></pre>
@@ -253,16 +392,16 @@ out(42) // inline comment</code></pre>
         <h2 id="examples">Example programs</h2>
 
         <p>
-          The <code>examples/</code> directory contains a runnable program for every language feature.
-          Each one has a matching file in <code>examples/expected/</code> holding the exact output it
-          should produce, which is how the integration tests work.
+          The <code>examples/</code> directory contains a runnable program for every language
+          feature. Each one has a matching file in <code>examples/expected/</code> holding the exact
+          output it should produce, which is how the integration tests work.
         </p>
 
-        <h3>Hello world</h3>
+        <h3 id="ex-hello">Hello world</h3>
         <pre><code>out("Hello World!")</code></pre>
         <pre><code>guppty examples/hello.gup</code></pre>
 
-        <h3>Recursion</h3>
+        <h3 id="ex-recursion">Recursion</h3>
         <pre><code>factorial(n)
     if n &lt;= 1
         return 1
@@ -271,7 +410,7 @@ out(42) // inline comment</code></pre>
 out(factorial(5))</code></pre>
         <pre><code>guppty examples/recursion_factorial.gup</code></pre>
 
-        <h3>Closure counter</h3>
+        <h3 id="ex-closure">Closure counter</h3>
         <pre><code>makeCounter(start)
     count = start
     increment()
@@ -283,53 +422,60 @@ out(factorial(5))</code></pre>
         <h2 id="about">About Guppty</h2>
 
         <p>
-          Guppty is not intended to replace Python or Rust. It is meant to be small enough to learn from
-          and pleasant enough to extend. The whole project is a single crate with clearly named files.
+          Guppty is not intended to replace Python or Rust. It is meant to be small enough to learn
+          from and pleasant enough to extend. The whole project is a single crate with clearly named
+          files.
         </p>
 
         <p>
-          The language supports variables, arithmetic, strings, booleans, <code>if</code>/<code>else</code>,
-          <code>while</code> and <code>for</code> loops, functions, recursion, and closures.
+          The language supports variables, arithmetic, strings, booleans,
+          <code>if</code>/<code>else</code>, <code>while</code> and <code>for</code> loops,
+          functions, recursion, and closures.
         </p>
 
         <p>
-          It exists to answer a straightforward question: what actually happens when you type text into a
-          file and tell a computer to run it? Keeping the implementation small means you can add a keyword
-          and follow it through the lexer, parser, compiler, and virtual machine in one sitting.
+          It exists to answer a straightforward question: what actually happens when you type text
+          into a file and tell a computer to run it? Keeping the implementation small means you can
+          add a keyword and follow it through the lexer, parser, compiler, and virtual machine in one
+          sitting.
         </p>
 
         <h2 id="internals">How it works</h2>
 
+        <p>Guppty is Rust 2021 with no external runtime dependencies. The pipeline is conventional:</p>
+
+        <ol class="pipeline">
+          <li>source<span>.gup file</span></li>
+          <li>lexer<span>tokens</span></li>
+          <li>parser<span>AST</span></li>
+          <li>compiler<span>bytecode</span></li>
+          <li>VM<span>stdout</span></li>
+        </ol>
+
         <p>
-          Guppty is Rust 2021 with no external runtime dependencies. The pipeline is conventional:
+          The lexer turns characters into tokens and tracks indentation. The parser builds an
+          abstract syntax tree. The compiler emits bytecode. The virtual machine executes that
+          bytecode on a value stack with call frames. Passing <code>--interp</code> skips compilation
+          and walks the syntax tree directly instead.
         </p>
 
-        <pre><code>source (.gup) -&gt; lexer (tokens) -&gt; parser (AST) -&gt; compiler (bytecode) -&gt; VM (stdout)</code></pre>
-
-        <p>
-          The lexer turns characters into tokens and tracks indentation. The parser builds an abstract
-          syntax tree. The compiler emits bytecode. The virtual machine executes that bytecode on a value
-          stack with call frames. Passing <code>--interp</code> skips compilation and walks the syntax tree
-          directly instead.
-        </p>
-
-        <dl>
+        <dl class="defs">
           <dt>Rust 2021</dt>
           <dd>
-            A fast native binary, strong types for tokens, syntax tree, and bytecode, and Cargo for tests
-            and builds. The core uses no external crates.
+            A fast native binary, strong types for tokens, syntax tree, and bytecode, and Cargo for
+            tests and builds. The core uses no external crates.
           </dd>
 
           <dt>Stack virtual machine</dt>
           <dd>
-            The default backend. Compiles to bytecode first, then executes it against a value stack and
-            call frames, in the same style as the Java, Python, and Lua virtual machines.
+            The default backend. Compiles to bytecode first, then executes it against a value stack
+            and call frames, in the same style as the Java, Python, and Lua virtual machines.
           </dd>
 
           <dt>Tree-walking interpreter</dt>
           <dd>
-            The <code>--interp</code> path. Walks the syntax tree node by node. Simpler to follow, and
-            useful as a reference implementation for verifying the compiler.
+            The <code>--interp</code> path. Walks the syntax tree node by node. Simpler to follow,
+            and useful as a reference implementation for verifying the compiler.
           </dd>
 
           <dt>Integration tests</dt>
@@ -348,6 +494,7 @@ out(factorial(5))</code></pre>
         </p>
 
         <table>
+          <caption>Average wall-clock time over 200 release-mode runs.</caption>
           <thead>
             <tr>
               <th>Backend</th>
@@ -367,17 +514,18 @@ out(factorial(5))</code></pre>
         </table>
 
         <p>
-          At this size the difference is noise: the program is tiny, so startup and file reading dominate.
-          As programs grow, the virtual machine should pull ahead because it executes precompiled bytecode
-          rather than re-walking the syntax tree on every run.
+          At this size the difference is noise: the program is tiny, so startup and file reading
+          dominate. As programs grow, the virtual machine should pull ahead because it executes
+          precompiled bytecode rather than re-walking the syntax tree on every run.
         </p>
 
         <h2 id="contributing">Contributing</h2>
 
         <p>
-          Fork the repository, create a branch, run <code>cargo test</code>, and open a pull request. Keep
-          each pull request focused on one change. If you add a language feature, include an example
-          <code>.gup</code> file and an expected output file so that it becomes a test automatically.
+          Fork the repository, create a branch, run <code>cargo test</code>, and open a pull request.
+          Keep each pull request focused on one change. If you add a language feature, include an
+          example <code>.gup</code> file and an expected output file so that it becomes a test
+          automatically.
         </p>
 
         <ul>
@@ -389,12 +537,12 @@ out(factorial(5))</code></pre>
 
         <h2 id="troubleshooting">Troubleshooting</h2>
 
-        <dl>
+        <dl class="defs">
           <dt>The installer failed</dt>
           <dd>
-            You need <code>curl</code> on macOS and Linux, or PowerShell on Windows, plus network access.
-            If Rust was just installed, open a new terminal so that <code>~/.cargo/bin</code> is on your
-            <code>PATH</code>, then try again.
+            You need <code>curl</code> on macOS and Linux, or PowerShell on Windows, plus network
+            access. If Rust was just installed, open a new terminal so that
+            <code>~/.cargo/bin</code> is on your <code>PATH</code>, then try again.
           </dd>
 
           <dt><code>cargo</code> or <code>rustc</code> not found</dt>
@@ -406,20 +554,20 @@ out(factorial(5))</code></pre>
           <dt><code>guppty</code> not found after installing</dt>
           <dd>
             The binary lives in <code>~/.cargo/bin</code>, or <code>C:\Users\You\.cargo\bin</code> on
-            Windows. Check your <code>PATH</code>, or run <code>source "$HOME/.cargo/env"</code> and try
-            again.
+            Windows. Check your <code>PATH</code>, or run <code>source "$HOME/.cargo/env"</code> and
+            try again.
           </dd>
 
           <dt>Guppty cannot read my file</dt>
           <dd>
-            Create a project with <code>guppty new my_program</code>, or pass a source path explicitly:
-            <code>guppty ./my_program.gup</code>.
+            Create a project with <code>guppty new my_program</code>, or pass a source path
+            explicitly: <code>guppty ./my_program.gup</code>.
           </dd>
 
           <dt>Indentation errors</dt>
           <dd>
-            Do not mix tabs and spaces. Use four spaces per level, as the examples do. A single line at
-            the wrong level will confuse the parser.
+            Do not mix tabs and spaces. Use four spaces per level, as the examples do. A single line
+            at the wrong level will confuse the parser.
           </dd>
 
           <dt>Verifying an installation</dt>
@@ -433,11 +581,11 @@ out(factorial(5))</code></pre>
 
         <p>Version numbers are recorded in <code>Cargo.toml</code>.</p>
 
-        <dl>
+        <dl class="defs">
           <dt>0.2.0</dt>
           <dd>
-            Project toolchain: install from a single command, create manifest-backed projects, check and
-            run their entry files, and build standalone native executables.
+            Project toolchain: install from a single command, create manifest-backed projects, check
+            and run their entry files, and build standalone native executables.
           </dd>
 
           <dt>0.1.0</dt>
@@ -448,11 +596,43 @@ out(factorial(5))</code></pre>
 
           <dt>Unreleased</dt>
           <dd>
-            Prebuilt executables for macOS, Linux, and Windows through GitHub Releases, so that Rust is
-            not required. The install script covers the from-source path today.
+            Prebuilt executables for macOS, Linux, and Windows through GitHub Releases, so that Rust
+            is not required. The install script covers the from-source path today.
           </dd>
         </dl>
       </main>
+
+      <aside class="sidebar" aria-label="Contents">
+        <nav id="toc">
+          <h2>On this page</h2>
+          <ul>
+            <li><a href="#documentation">Documentation</a></li>
+            <li><a href="#installing">Installing Guppty</a></li>
+            <li><a href="#from-source">Building from source</a></li>
+            <li><a href="#quick-start">Quick start</a></li>
+            <li><a href="#downloads">Downloads</a></li>
+            <li><a href="#commands">Command reference</a></li>
+            <li><a href="#language">Language reference</a></li>
+            <li><a href="#examples">Example programs</a></li>
+            <li><a href="#about">About Guppty</a></li>
+            <li><a href="#internals">How it works</a></li>
+            <li><a href="#benchmarks">Benchmarks</a></li>
+            <li><a href="#contributing">Contributing</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="#releases">Release notes</a></li>
+          </ul>
+
+          <h2>Reference</h2>
+          <ul>
+            <li><a class="mono" href="#cmd-new">guppty new</a></li>
+            <li><a class="mono" href="#cmd-check">guppty check</a></li>
+            <li><a class="mono" href="#cmd-run">guppty run</a></li>
+            <li><a class="mono" href="#cmd-build">guppty build</a></li>
+            <li><a class="mono" href="#cmd-help">guppty help</a></li>
+            <li><a class="mono" href="#cmd-interp">--interp</a></li>
+          </ul>
+        </nav>
+      </aside>
     </div>
 
     <footer class="site-footer">
@@ -463,5 +643,7 @@ out(factorial(5))</code></pre>
         </p>
       </div>
     </footer>
+
+    <script src="script.js" defer></script>
   </body>
 </html>
