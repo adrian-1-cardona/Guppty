@@ -612,16 +612,16 @@ tbody tr:hover td {
     padding-top: 20px;
   }
 
+  /* Keep article first on small screens; TOC follows after content. */
   .sidebar {
-    order: -1;
     position: static;
     width: auto;
     max-height: none;
     overflow: visible;
-    margin: 0 0 24px;
-    padding: 0 0 16px;
+    margin: 28px 0 0;
+    padding: 16px 0 0;
     border-left: 0;
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
   }
 
   .sidebar a {
