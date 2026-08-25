@@ -5,913 +5,463 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Guppty docs — install the CLI, write .gup programs, compile to bytecode, and run them from your terminal."
+      content="Guppty documentation — install the CLI, write .gup programs, compile them to bytecode, and run them from your terminal."
     >
     <title>Guppty Documentation</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="mobile-overlay" aria-hidden="true"></div>
-
-    <button class="mobile-menu" type="button" aria-label="Open documentation menu" aria-controls="sidebar" aria-expanded="false">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-
-    <div class="docs-shell">
-      <aside class="sidebar" id="sidebar">
-        <a class="brand" href="#installation" data-doc-page="getting-started" aria-label="Guppty documentation home">
-          <span class="brand-mark">G</span>
-          <span class="brand-text">
-            <strong>Guppty</strong>
-            <span>Documentation</span>
-          </span>
-        </a>
-
-        <nav class="docs-nav" aria-label="Documentation navigation">
-          <details open>
-            <summary>Getting Started</summary>
-            <a href="#installation" class="nav-link active" data-doc-page="getting-started">Installation</a>
-            <a href="#quick-start" class="nav-link" data-doc-page="getting-started">Quick Start</a>
-            <a href="#download" class="nav-link" data-doc-page="getting-started">Download</a>
-            <a href="#cli" class="nav-link" data-doc-page="getting-started">CLI Commands</a>
-          </details>
-
-          <details open>
-            <summary>About Guppty</summary>
-            <a href="#about" class="nav-link" data-doc-page="about">What Is Guppty?</a>
-            <a href="#benchmarks" class="nav-link" data-doc-page="about">Benchmarks</a>
-            <a href="#why" class="nav-link" data-doc-page="about">Why I Built It</a>
-            <a href="#architecture" class="nav-link" data-doc-page="about">How It Works</a>
-            <a href="#lessons" class="nav-link" data-doc-page="about">What I Learned</a>
-          </details>
-
-          <details open>
-            <summary>Learn Guppty</summary>
-            <a href="#syntax" class="nav-link" data-doc-page="learn">Syntax</a>
-            <a href="#examples" class="nav-link" data-doc-page="learn">Examples</a>
-          </details>
-
-          <details open>
-            <summary>Project</summary>
-            <a href="#contribute" class="nav-link" data-doc-page="project">Contribute</a>
-            <a href="#troubleshooting" class="nav-link" data-doc-page="project">Common Issues</a>
-            <a href="#updates" class="nav-link" data-doc-page="project">Updates</a>
-          </details>
-
-          <a class="sidebar-cta" href="https://github.com/adrian-1-cardona/Guppty" target="_blank" rel="noreferrer">
-            View on GitHub →
-          </a>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="site-title" href="index.html">Guppty</a>
+        <nav class="site-nav" aria-label="Site navigation">
+          <a href="#documentation">Documentation</a>
+          <a href="#downloads">Downloads</a>
+          <a href="https://github.com/adrian-1-cardona/Guppty">Source</a>
         </nav>
+      </div>
+    </header>
+
+    <div class="wrap page">
+      <aside class="sidebar" aria-label="Contents">
+        <h2>Contents</h2>
+        <ul>
+          <li><a href="#documentation">Documentation</a></li>
+          <li><a href="#installing">Installing Guppty</a></li>
+          <li><a href="#from-source">Building from source</a></li>
+          <li><a href="#quick-start">Quick start</a></li>
+          <li><a href="#downloads">Downloads</a></li>
+          <li><a href="#commands">Command reference</a></li>
+          <li><a href="#language">Language reference</a></li>
+          <li><a href="#examples">Example programs</a></li>
+          <li><a href="#about">About Guppty</a></li>
+          <li><a href="#internals">How it works</a></li>
+          <li><a href="#benchmarks">Benchmarks</a></li>
+          <li><a href="#contributing">Contributing</a></li>
+          <li><a href="#troubleshooting">Troubleshooting</a></li>
+          <li><a href="#releases">Release notes</a></li>
+        </ul>
+
+        <h2>Reference</h2>
+        <ul>
+          <li><a href="#cmd-new">guppty new</a></li>
+          <li><a href="#cmd-check">guppty check</a></li>
+          <li><a href="#cmd-run">guppty run</a></li>
+          <li><a href="#cmd-build">guppty build</a></li>
+          <li><a href="#cmd-help">guppty help</a></li>
+          <li><a href="#cmd-interp">--interp</a></li>
+        </ul>
       </aside>
 
       <main class="content">
-        <!-- Getting Started -->
-        <div class="doc-page active" data-doc-page-panel="getting-started">
+        <h1 id="documentation">Guppty Documentation</h1>
 
-          <section class="hero docs-section" id="installation">
-            <p class="eyebrow">Getting Started · v0.2.0</p>
-            <h1>Get Guppty on your machine</h1>
-            <p class="hero-copy">
-              I built Guppty in Rust — a small language where you write <code>.gup</code> files, compile them to bytecode, and run them from the terminal. The whole compiler fits in one repo you can read in an afternoon.
-            </p>
+        <p>
+          Guppty is a small indentation-based programming language written in Rust. You write
+          <code>.gup</code> files, and the <code>guppty</code> command compiles them to bytecode and runs
+          them on a stack virtual machine. A tree-walking interpreter is also included as a second
+          backend.
+        </p>
 
-            <div class="install-card tab-group" data-tab-group="quick-install" aria-label="Install Guppty">
-              <div class="install-card-bar">
-                <div class="install-card-title">
-                  <h2>Install <span class="status-chip">Recommended</span></h2>
-                  <p>One command. Rust only gets installed if you don't already have it.</p>
-                </div>
-                <div class="tabs" role="tablist" aria-label="Choose your operating system">
-                  <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="quick-mac-panel" id="quick-mac-tab" data-tab="mac">macOS</button>
-                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="quick-linux-panel" id="quick-linux-tab" data-tab="linux">Linux</button>
-                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="quick-windows-panel" id="quick-windows-tab" data-tab="windows">Windows</button>
-                </div>
-              </div>
+        <p>
+          This page documents installation, the command-line interface, the language itself, and the
+          internals. The current version is 0.2.0.
+        </p>
 
-              <div class="install-card-body">
-                <div class="tab-panel active" id="quick-mac-panel" role="tabpanel" data-panel="mac" aria-labelledby="quick-mac-tab">
-                  <div class="terminal-panel command-terminal one-line-install">
-                    <div class="terminal-top">
-                      <span class="terminal-title">Terminal</span>
-                      <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy install command">
-                        <span class="copy-icon" aria-hidden="true"></span>
-                        <span>Copy</span>
-                      </button>
-                    </div>
-                    <div class="terminal-body">
-                      <code><span class="prompt" aria-hidden="true">$</span>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
-                    </div>
-                  </div>
-                  <p class="install-hint">Paste this in Terminal. The script checks for Rust, builds <code>guppty</code>, and leaves it on your PATH. You only run it once.</p>
-                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.sh" target="_blank" rel="noreferrer">Read install.sh first →</a>
-                </div>
+        <h2 id="installing">Installing Guppty</h2>
 
-                <div class="tab-panel" id="quick-linux-panel" role="tabpanel" data-panel="linux" hidden aria-labelledby="quick-linux-tab">
-                  <div class="terminal-panel command-terminal one-line-install">
-                    <div class="terminal-top">
-                      <span class="terminal-title">Terminal</span>
-                      <button class="copy-button" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash" aria-label="Copy install command">
-                        <span class="copy-icon" aria-hidden="true"></span>
-                        <span>Copy</span>
-                      </button>
-                    </div>
-                    <div class="terminal-body">
-                      <code><span class="prompt" aria-hidden="true">$</span>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code>
-                    </div>
-                  </div>
-                  <p class="install-hint">Paste this in your shell. The script checks for Rust, builds <code>guppty</code>, and leaves it on your PATH. You only run it once.</p>
-                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.sh" target="_blank" rel="noreferrer">Read install.sh first →</a>
-                </div>
+        <p>
+          The install script checks for a Rust toolchain, installs it with rustup if it is missing,
+          builds <code>guppty</code>, and places the binary on your <code>PATH</code>. You only need to
+          run it once.
+        </p>
 
-                <div class="tab-panel" id="quick-windows-panel" role="tabpanel" data-panel="windows" hidden aria-labelledby="quick-windows-tab">
-                  <div class="terminal-panel command-terminal one-line-install">
-                    <div class="terminal-top">
-                      <span class="terminal-title">PowerShell</span>
-                      <button class="copy-button" type="button" data-copy="irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex" aria-label="Copy Windows install command">
-                        <span class="copy-icon" aria-hidden="true"></span>
-                        <span>Copy</span>
-                      </button>
-                    </div>
-                    <div class="terminal-body">
-                      <code><span class="prompt" aria-hidden="true">PS&gt;</span>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code>
-                    </div>
-                  </div>
-                  <p class="install-hint">Run this in PowerShell. Same flow as macOS and Linux: Rust if needed, then the <code>guppty</code> CLI on your PATH.</p>
-                  <a class="ghost-link" href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.ps1" target="_blank" rel="noreferrer">Read install.ps1 first →</a>
-                </div>
-              </div>
-            </div>
+        <h3>macOS and Linux</h3>
 
-            <details class="source-fold" id="from-source">
-              <summary>
-                <span>
-                  <strong>Build from source</strong>
-                  <span>Clone the repo and install with Cargo</span>
-                </span>
-              </summary>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.sh | bash</code></pre>
 
-              <div class="source-fold-body tab-group" data-tab-group="from-source">
-                <p>Prefer to clone and build it yourself? Pick your OS, then follow the steps. You'll need Git and Rust.</p>
+        <p>
+          Read
+          <a href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.sh">install.sh</a>
+          before running it if you would rather know what it does first.
+        </p>
 
-                <div class="tabs" role="tablist" aria-label="Operating system source install commands">
-                  <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="mac-panel" id="source-mac-tab" data-tab="mac">macOS</button>
-                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="linux-panel" id="source-linux-tab" data-tab="linux">Linux</button>
-                  <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="windows-panel" id="source-windows-tab" data-tab="windows">Windows</button>
-                </div>
+        <h3>Windows</h3>
 
-              <div class="tab-panel active" id="mac-panel" role="tabpanel" data-panel="mac" aria-labelledby="source-mac-tab">
-                <ol class="install-list">
-                  <li>
-                    <p>Install Rust with rustup. Restart your terminal when it finishes so <code>cargo</code> is on your PATH.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Clone the repo from GitHub.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="git clone https://github.com/adrian-1-cardona/Guppty.git" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>git clone https://github.com/adrian-1-cardona/Guppty.git</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Move into the project folder.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cd Guppty" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cd Guppty</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Install the <code>guppty</code> command. Cargo puts it in <code>~/.cargo/bin</code>.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cargo install --path ." aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cargo install --path .</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Run an example to make sure everything works.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty examples/program.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty examples/program.gup</code>
-                  </div>
-                    </div>
-                  </li>
-                </ol>
-              </div>
+        <pre><code>irm https://raw.githubusercontent.com/adrian-1-cardona/guppty/main/install.ps1 | iex</code></pre>
 
-              <div class="tab-panel" id="linux-panel" role="tabpanel" data-panel="linux" hidden aria-labelledby="source-linux-tab">
-                <ol class="install-list">
-                  <li>
-                    <p>Install Rust with rustup. Open a new terminal when done.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Clone the repo.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="git clone https://github.com/adrian-1-cardona/Guppty.git" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>git clone https://github.com/adrian-1-cardona/Guppty.git</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Go into the project folder.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cd Guppty" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cd Guppty</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Install the CLI from the local checkout.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cargo install --path ." aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cargo install --path .</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Run an example to verify the install.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty examples/program.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty examples/program.gup</code>
-                  </div>
-                    </div>
-                  </li>
-                </ol>
-              </div>
+        <p>
+          Run this from PowerShell. It follows the same steps as the shell script: install Rust if
+          needed, then put the <code>guppty</code> command on your <code>PATH</code>. The script is
+          <a href="https://github.com/adrian-1-cardona/Guppty/blob/main/install.ps1">install.ps1</a>.
+        </p>
 
-              <div class="tab-panel" id="windows-panel" role="tabpanel" data-panel="windows" hidden aria-labelledby="source-windows-tab">
-                <ol class="install-list">
-                  <li>
-                    <p>Install Rust with winget. Close and reopen your terminal afterward.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="winget install Rustlang.Rustup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>winget install Rustlang.Rustup</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Clone the repo.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="git clone https://github.com/adrian-1-cardona/Guppty.git" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>git clone https://github.com/adrian-1-cardona/Guppty.git</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Move into the project folder.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cd Guppty" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cd Guppty</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Install the CLI. The binary lands in <code>C:\Users\You\.cargo\bin</code>.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cargo install --path ." aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cargo install --path .</code>
-                  </div>
-                    </div>
-                  </li>
-                  <li>
-                    <p>Run an example. On Windows, use backslashes in paths.</p>
-                    <div class="terminal-panel command-terminal">
-                      <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty .\examples\program.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty .\examples\program.gup</code>
-                  </div>
-                    </div>
-                  </li>
-                </ol>
-              </div>
-              </div>
-            </details>
-          </section>
+        <h2 id="from-source">Building from source</h2>
 
-          <section class="docs-section" id="quick-start">
-            <p class="eyebrow">First Run</p>
-            <h2>Quick Start</h2>
+        <p>
+          You need Git and Rust. Install Rust from <a href="https://rustup.rs">rustup.rs</a>, then open a
+          new terminal so that <code>cargo</code> is on your <code>PATH</code>.
+        </p>
 
-            <p>
-              Once you've <a href="#installation">installed</a>, <code>guppty</code> stays on your machine. These four steps take a new project from an empty folder to a standalone executable.
-            </p>
+        <h3>macOS and Linux</h3>
 
-            <div class="steps">
-              <article class="step-card">
-                <span class="step-number">1</span>
-                <h3>Create a project</h3>
-                <p>Creates <code>hello/guppty.toml</code> and a starter <code>hello/src/main.gup</code>.</p>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty new hello &amp;&amp; cd hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty new hello &amp;&amp; cd hello</code>
-                  </div>
-                </div>
-              </article>
+        <pre><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+git clone https://github.com/adrian-1-cardona/Guppty.git
+cd Guppty
+cargo install --path .
+guppty examples/program.gup</code></pre>
 
-              <article class="step-card">
-                <span class="step-number">2</span>
-                <h3>Check it</h3>
-                <p>Reads the project entry file and checks for errors without running it.</p>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty check" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty check</code>
-                  </div>
-                </div>
-              </article>
+        <h3>Windows</h3>
 
-              <article class="step-card">
-                <span class="step-number">3</span>
-                <h3>Run it</h3>
-                <p>Compiles to bytecode and runs on the VM. Edit, save, run again.</p>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty run" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty run</code>
-                  </div>
-                </div>
-              </article>
+        <pre><code>winget install Rustlang.Rustup
+git clone https://github.com/adrian-1-cardona/Guppty.git
+cd Guppty
+cargo install --path .
+guppty .\examples\program.gup</code></pre>
 
-              <article class="step-card">
-                <span class="step-number">4</span>
-                <h3>Build it</h3>
-                <p>Packages the runtime and source into a standalone executable in <code>build/</code>.</p>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty build" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty build</code>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
+        <p>
+          Cargo installs the binary into <code>~/.cargo/bin</code>, or
+          <code>C:\Users\You\.cargo\bin</code> on Windows.
+        </p>
 
-          <section class="docs-section" id="download">
-            <p class="eyebrow">Download</p>
-            <h2>Source ZIP</h2>
-            <p>
-              Want the repo as a ZIP instead of cloning? Download it, unzip, then run <code>cargo install --path .</code> inside (you'll need Rust). The <a href="#installation">installer</a> is still the fastest path if you just want the <code>guppty</code> command.
-            </p>
-            <p>
-              Prebuilt binaries without Rust are planned for a future release.
-            </p>
+        <h2 id="quick-start">Quick start</h2>
 
-            <div class="download-actions">
-              <a class="primary-button" href="https://github.com/adrian-1-cardona/Guppty/archive/refs/heads/main.zip">Download source ZIP</a>
-              <a class="secondary-button" href="https://github.com/adrian-1-cardona/Guppty" target="_blank" rel="noreferrer">View on GitHub</a>
-            </div>
-          </section>
+        <p>
+          These four commands take an empty directory to a standalone executable. Commands that are not
+          given a filename read the entry path from <code>guppty.toml</code>.
+        </p>
 
-          <section class="docs-section" id="cli">
-            <p class="eyebrow">Terminal</p>
-            <h2>CLI Commands</h2>
-            <p>
-              After install you get a small project toolkit. Commands without a filename read the entry path from <code>guppty.toml</code>, while direct <code>.gup</code> file execution remains available.
-            </p>
-            <p>
-              Add <code>--interp</code> to run through the tree-walking interpreter instead of the VM. Both backends should match; the flag is there if you want to compare them.
-            </p>
+        <dl>
+          <dt><code>guppty new hello &amp;&amp; cd hello</code></dt>
+          <dd>Creates <code>hello/guppty.toml</code> and a starter <code>hello/src/main.gup</code>.</dd>
 
-            <div class="command-grid">
-              <article class="command-row">
-                <div>
-                  <h3>guppty new</h3>
-                  <p>Creates a project folder with a manifest and <code>src/main.gup</code>.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty new hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty new hello</code>
-                  </div>
-                </div>
-              </article>
+          <dt><code>guppty check</code></dt>
+          <dd>Reads the project entry file and reports errors without running the program.</dd>
 
-              <article class="command-row">
-                <div>
-                  <h3>guppty check</h3>
-                  <p>Lexes, parses, and compiles the project without executing it.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty check" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty check</code>
-                  </div>
-                </div>
-              </article>
+          <dt><code>guppty run</code></dt>
+          <dd>Compiles to bytecode and executes it on the virtual machine.</dd>
 
-              <article class="command-row">
-                <div>
-                  <h3>guppty run</h3>
-                  <p>Compile and execute the project on the VM. You can also pass a file path.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty run" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty run</code>
-                  </div>
-                </div>
-              </article>
+          <dt><code>guppty build</code></dt>
+          <dd>Packages the runtime and source into a standalone executable under <code>build/</code>.</dd>
+        </dl>
 
-              <article class="command-row">
-                <div>
-                  <h3>guppty build</h3>
-                  <p>Builds a standalone executable, with <code>--output</code> available for a custom path.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty build --output dist/hello" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty build --output dist/hello</code>
-                  </div>
-                </div>
-              </article>
+        <h2 id="downloads">Downloads</h2>
 
-              <article class="command-row">
-                <div>
-                  <h3>--interp flag</h3>
-                  <p>Run through the tree-walking interpreter instead of the VM.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty hello.gup --interp" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty hello.gup --interp</code>
-                  </div>
-                </div>
-              </article>
+        <p>
+          The repository is available as a
+          <a href="https://github.com/adrian-1-cardona/Guppty/archive/refs/heads/main.zip">source ZIP</a>.
+          Unpack it and run <code>cargo install --path .</code> inside the directory; this requires Rust.
+          The install script above is the shorter path if you only want the <code>guppty</code> command.
+        </p>
 
-              <article class="command-row">
-                <div>
-                  <h3>guppty help</h3>
-                  <p>Lists all subcommands and usage.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty help" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty help</code>
-                  </div>
-                </div>
-              </article>
+        <p>Prebuilt binaries that do not require Rust are planned for a future release.</p>
 
-              <article class="command-row">
-                <div>
-                  <h3>cargo run (dev)</h3>
-                  <p>When working on Guppty itself — run without reinstalling the binary.</p>
-                </div>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="cargo run -- examples/program.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>cargo run -- examples/program.gup</code>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
-        </div>
+        <h2 id="commands">Command reference</h2>
 
-        <!-- About -->
-        <div class="doc-page" data-doc-page-panel="about" hidden>
-          <section class="docs-section" id="about">
-            <p class="eyebrow">Project</p>
-            <h2>What Is Guppty?</h2>
-            <p>
-              Guppty is a small indentation-based language I built from scratch in Rust. You write <code>.gup</code> files, and Guppty turns that text into something your computer can run — with every step visible in the source.
-            </p>
-            <p>
-              It's not trying to replace Python or Rust. It's meant to be simple enough to learn from and pleasant enough to extend. The whole project fits in one crate with clearly named files, so you can actually read through it in an afternoon.
-            </p>
-            <p>
-              You get variables, arithmetic, strings, booleans, <code>if</code>/<code>else</code>, <code>while</code> and <code>for</code> loops, functions, recursion, and closures. No curly braces — just indent your blocks like Python.
-            </p>
-            <p>
-              There are two ways to run programs: a bytecode compiler + stack VM (the default), and a tree-walking interpreter (via <code>--interp</code>). Both should match for correct programs. The examples in <code>examples/</code> double as integration tests — if you break something, the tests catch it.
-            </p>
-          </section>
+        <p>
+          All commands accept an optional <code>.gup</code> file path instead of reading the project
+          manifest.
+        </p>
 
-          <section class="docs-section" id="benchmarks">
-            <p class="eyebrow">Performance</p>
-            <h2>Benchmarks</h2>
-            <p>
-              Having two backends in one project means you can compare them. I ran <code>recursion_fib.gup</code> 200 times in release mode and averaged the wall-clock time (startup + file I/O + lex + parse + compile/interpret + execute).
-            </p>
+        <h3 id="cmd-new">guppty new</h3>
+        <p>Creates a project directory containing a manifest and <code>src/main.gup</code>.</p>
+        <pre><code>guppty new hello</code></pre>
 
-            <div class="benchmark-chart" role="img" aria-label="VM averaged 2.69 ms, tree-walker averaged 2.64 ms.">
-              <div class="benchmark-row">
-                <span>VM (compile + run)</span>
-                <span class="benchmark-track"><span class="benchmark-bar vm-bar"></span></span>
-                <span>2.69 ms</span>
-              </div>
-              <div class="benchmark-row">
-                <span>Tree-walker (--interp)</span>
-                <span class="benchmark-track"><span class="benchmark-bar tree-bar"></span></span>
-                <span>2.64 ms</span>
-              </div>
-            </div>
+        <h3 id="cmd-check">guppty check</h3>
+        <p>Lexes, parses, and compiles the project without executing it.</p>
+        <pre><code>guppty check</code></pre>
 
-            <p>
-              At this scale the difference is basically noise — the program is tiny, so startup and file reading dominate. The point is the infrastructure exists: as programs get bigger, the VM should pull ahead because it runs precompiled bytecode instead of re-walking the AST every time.
-            </p>
-          </section>
+        <h3 id="cmd-run">guppty run</h3>
+        <p>Compiles and executes the project on the virtual machine.</p>
+        <pre><code>guppty run
+guppty hello.gup</code></pre>
 
-          <section class="docs-section" id="why">
-            <p class="eyebrow">Purpose</p>
-            <h2>Why I Built It</h2>
-            <p>
-              The world doesn't need another production language. Guppty exists because I wanted to answer a simple question: what actually happens when you type text into a file and tell a computer to run it?
-            </p>
-            <p>
-              Most of us use languages every day without looking under the hood. That's fine for getting work done. But if you've ever been curious about how a language works — from raw text to executed instructions — Guppty gives you a complete, readable implementation to study.
-            </p>
-            <p>
-              I kept it small on purpose. When the whole codebase fits in your head, you can add a keyword and trace it through the lexer, parser, compiler, and VM in one sitting. That's the kind of feedback loop that actually builds intuition.
-            </p>
-          </section>
+        <h3 id="cmd-build">guppty build</h3>
+        <p>Builds a standalone executable. Use <code>--output</code> to choose the path.</p>
+        <pre><code>guppty build
+guppty build --output dist/hello</code></pre>
 
-          <section class="docs-section" id="architecture">
-            <p class="eyebrow">Under the Hood</p>
-            <h2>How It Works</h2>
-            <p>
-              Guppty is Rust 2021 with zero external runtime dependencies. The core pipeline is textbook compiler architecture, but small enough to read in an afternoon.
-            </p>
+        <h3 id="cmd-help">guppty help</h3>
+        <p>Lists every subcommand and its usage.</p>
+        <pre><code>guppty help</code></pre>
 
-            <div class="pipeline" aria-label="Guppty language pipeline">
-              <div><span>Source</span><span>.gup file</span></div>
-              <div><span>Lexer</span><span>tokens</span></div>
-              <div><span>Parser</span><span>AST</span></div>
-              <div><span>Compiler</span><span>bytecode</span></div>
-              <div><span>VM</span><span>stdout</span></div>
-            </div>
+        <h3 id="cmd-interp">--interp</h3>
+        <p>
+          Runs the program through the tree-walking interpreter instead of the virtual machine. Both
+          backends should produce identical output for correct programs; the flag exists so you can
+          compare them.
+        </p>
+        <pre><code>guppty hello.gup --interp</code></pre>
 
-            <p>
-              The lexer turns characters into tokens (and tracks indentation). The parser builds an AST. The compiler emits bytecode. The VM executes it on a stack. Pass <code>--interp</code> to skip compilation and walk the AST directly instead.
-            </p>
+        <h3>cargo run</h3>
+        <p>When working on Guppty itself, run the compiler without reinstalling the binary.</p>
+        <pre><code>cargo run -- examples/program.gup</code></pre>
 
-            <div class="tech-grid">
-              <article>
-                <h3>Rust 2021</h3>
-                <p>Fast native binary, strong types for tokens/AST/bytecode, and Cargo for tests and builds. No external crates in the core — every line is hand-written.</p>
-              </article>
-              <article>
-                <h3>Stack VM</h3>
-                <p>The default backend. Compiles to bytecode first, then executes on a value stack + call frames. Same idea as Java, Python, or Lua VMs.</p>
-              </article>
-              <article>
-                <h3>Tree Interpreter</h3>
-                <p>The <code>--interp</code> path. Walks the AST node by node. Simpler to understand, good as a reference to verify the compiler.</p>
-              </article>
-              <article>
-                <h3>Integration Tests</h3>
-                <p>Run real <code>.gup</code> programs and compare stdout to expected output files. Docs and tests stay in sync because they're the same examples.</p>
-              </article>
-            </div>
-          </section>
+        <h2 id="language">Language reference</h2>
 
-          <section class="docs-section" id="lessons">
-            <p class="eyebrow">Notes</p>
-            <h2>What I Learned</h2>
-            <p>Building even a tiny language teaches you things you can't get from a textbook alone. Here's what stuck with me:</p>
-            <div class="note-list">
-              <p><strong>Everything connects.</strong> Add one keyword and you touch the lexer, parser, compiler, VM, an example program, and a test. What looks like a small change ripples through the whole codebase — and that's the point.</p>
-              <p><strong>Examples are tests.</strong> The <code>examples/</code> folder looks like demos, but it's also the test suite. Break a feature and a test fails. Add a feature and you write a demo at the same time.</p>
-              <p><strong>Error messages matter.</strong> A language can have great syntax, but if errors are cryptic, people won't use it. I spent real time on clear messages with file:line:column, a caret, and a <code>help:</code> line telling you how to fix it.</p>
-            </div>
-          </section>
-        </div>
+        <p>
+          Blocks are delimited by indentation; there are no curly braces or semicolons. Use four spaces
+          per level and do not mix tabs and spaces. Variables are created by assignment, with no
+          <code>let</code> or <code>var</code> keyword. The available types are integers, floats, strings,
+          chars, booleans, and arrays. <code>out()</code> prints a value.
+        </p>
 
-        <!-- Learn -->
-        <div class="doc-page" data-doc-page-panel="learn" hidden>
-          <section class="docs-section" id="syntax">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Language</p>
-                <h2>Syntax <span class="status-chip">Indentation based</span></h2>
-              </div>
-            </div>
-
-            <p>
-              Guppty uses indentation for blocks — no curly braces or semicolons. Indent the lines that belong inside an <code>if</code>, loop, or function, and the parser figures out the structure.
-            </p>
-            <p>
-              Variables are created by assignment — no <code>let</code> or <code>var</code>. You get integers, floats, strings, chars, booleans, and arrays. Use <code>out()</code> to print anything.
-            </p>
-
-            <div class="syntax-layout">
-              <div class="syntax-list" role="tablist" aria-label="Syntax examples">
-                <button class="syntax-tab active" type="button" data-syntax="basics" aria-selected="true">Basics</button>
-                <button class="syntax-tab" type="button" data-syntax="control" aria-selected="false">Control Flow</button>
-                <button class="syntax-tab" type="button" data-syntax="functions" aria-selected="false">Functions</button>
-                <button class="syntax-tab" type="button" data-syntax="closures" aria-selected="false">Closures</button>
-                <button class="syntax-tab" type="button" data-syntax="comments" aria-selected="false">Comments</button>
-              </div>
-
-              <div class="syntax-panels">
-                <article class="syntax-panel active" data-syntax-panel="basics">
-                  <h3>Variables and output</h3>
-                  <p>Assign values to names and print them with <code>out()</code>. No type annotations needed.</p>
-                  <pre><code>x = 5
+        <h3>Variables and output</h3>
+        <pre><code>x = 5
 name = "Guppty"
 ready = true
 letter = 'g'
 out(name)
 out(x + 10)</code></pre>
-                </article>
 
-                <article class="syntax-panel" data-syntax-panel="control" hidden>
-                  <h3>If, while, and for</h3>
-                  <p>Indent the body under the keyword. <code>for</code> uses <code>range(1 through 3)</code> for iteration bounds.</p>
-                  <pre><code>score = 85
-if score >= 80
+        <h3>Control flow</h3>
+        <p>
+          Indent the body under the keyword. <code>for</code> loops take a range written as
+          <code>range(1 through 3)</code>.
+        </p>
+        <pre><code>score = 85
+if score &gt;= 80
     out("You passed!")
 else
     out("Keep studying!")
 
 for i in range(1 through 3)
     out(i)</code></pre>
-                </article>
 
-                <article class="syntax-panel" data-syntax-panel="functions" hidden>
-                  <h3>Functions</h3>
-                  <p>Write the name and params on one line, indent the body. Use <code>return</code> to send a value back.</p>
-                  <pre><code>add(a, b)
+        <h3>Functions</h3>
+        <p>Write the name and parameters on one line, then indent the body. <code>return</code> sends a value back.</p>
+        <pre><code>add(a, b)
     return a + b
 
 out(add(2, 3))</code></pre>
-                </article>
 
-                <article class="syntax-panel" data-syntax-panel="closures" hidden>
-                  <h3>Closures</h3>
-                  <p>Define a function inside another and return it. The inner function remembers variables from the outer scope.</p>
-                  <pre><code>makeAdder(x)
+        <h3>Closures</h3>
+        <p>A function defined inside another function keeps access to the enclosing scope.</p>
+        <pre><code>makeAdder(x)
     addIt(y)
         return x + y
     return addIt
 
 adder = makeAdder(5)
 out(adder(3))</code></pre>
-                </article>
 
-                <article class="syntax-panel" data-syntax-panel="comments" hidden>
-                  <h3>Comments</h3>
-                  <p>Double-slash comments, same as C, Java, or Rust. Everything after <code>//</code> on a line is ignored.</p>
-                  <pre><code>// this is a comment
+        <h3>Comments</h3>
+        <p>Everything after <code>//</code> on a line is ignored.</p>
+        <pre><code>// this is a comment
 out(42) // inline comment</code></pre>
-                </article>
-              </div>
-            </div>
-          </section>
 
-          <section class="docs-section" id="examples">
-            <p class="eyebrow">Programs</p>
-            <h2>Examples</h2>
-            <p>
-              The <code>examples/</code> folder has runnable programs for every feature. Each one has a matching file in <code>examples/expected/</code> with the exact output it should produce.
-            </p>
+        <h2 id="examples">Example programs</h2>
 
-            <div class="example-grid">
-              <article>
-                <h3>Hello World</h3>
-                <p>The shortest possible Guppty program.</p>
-                <pre><code>out("Hello World!")</code></pre>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty examples/hello.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty examples/hello.gup</code>
-                  </div>
-                </div>
-              </article>
+        <p>
+          The <code>examples/</code> directory contains a runnable program for every language feature.
+          Each one has a matching file in <code>examples/expected/</code> holding the exact output it
+          should produce, which is how the integration tests work.
+        </p>
 
-              <article>
-                <h3>Recursion</h3>
-                <p>Factorial with a recursive function. Works on both the VM and interpreter.</p>
-                <pre><code>factorial(n)
-    if n <= 1
+        <h3>Hello world</h3>
+        <pre><code>out("Hello World!")</code></pre>
+        <pre><code>guppty examples/hello.gup</code></pre>
+
+        <h3>Recursion</h3>
+        <pre><code>factorial(n)
+    if n &lt;= 1
         return 1
     return n * factorial(n - 1)
 
 out(factorial(5))</code></pre>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty examples/recursion_factorial.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty examples/recursion_factorial.gup</code>
-                  </div>
-                </div>
-              </article>
+        <pre><code>guppty examples/recursion_factorial.gup</code></pre>
 
-              <article>
-                <h3>Closure Counter</h3>
-                <p>A counter that keeps its own state through a captured variable.</p>
-                <pre><code>makeCounter(start)
+        <h3>Closure counter</h3>
+        <pre><code>makeCounter(start)
     count = start
     increment()
         count = count + 1
         return count
     return increment</code></pre>
-                <div class="terminal-panel command-terminal">
-                  <div class="terminal-top">
-                    <span class="terminal-title">Shell</span>
-                    <button class="copy-button" type="button" data-copy="guppty examples/closure_counter.gup" aria-label="Copy command"><span class="copy-icon" aria-hidden="true"></span><span>Copy</span></button>
-                  </div>
-                  <div class="terminal-body">
-                    <code>guppty examples/closure_counter.gup</code>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
-        </div>
+        <pre><code>guppty examples/closure_counter.gup</code></pre>
 
-        <!-- Project -->
-        <div class="doc-page" data-doc-page-panel="project" hidden>
-          <section class="docs-section" id="contribute">
-            <p class="eyebrow">Community</p>
-            <h2>Contribute</h2>
-            <p>
-              Guppty is open source and I welcome contributions — bug fixes, new features, better errors, docs, whatever. The codebase is small enough that you can get oriented in an afternoon.
-            </p>
-            <p>
-              Fork the repo, make a branch, run <code>cargo test</code>, and open a pull request. Keep PRs focused on one thing. If you add a language feature, include an example <code>.gup</code> file and an expected output file so it becomes a test automatically.
-            </p>
+        <h2 id="about">About Guppty</h2>
 
-            <div class="checklist">
-              <label><input type="checkbox" checked disabled> Install from the docs (or Rust from rustup.rs)</label>
-              <label><input type="checkbox" checked disabled> Run <code>cargo test</code> before opening a PR</label>
-              <label><input type="checkbox" checked disabled> Keep syntax keywords in <code>src/syntax.rs</code></label>
-              <label><input type="checkbox" checked disabled> Don't commit <code>target/</code> build output</label>
-            </div>
-          </section>
+        <p>
+          Guppty is not intended to replace Python or Rust. It is meant to be small enough to learn from
+          and pleasant enough to extend. The whole project is a single crate with clearly named files.
+        </p>
 
-          <section class="docs-section" id="troubleshooting">
-            <p class="eyebrow">Help</p>
-            <h2>Common Issues</h2>
-            <p>Most setup problems come down to a missing tool on your PATH or a fresh terminal session. Here's what I see most often:</p>
+        <p>
+          The language supports variables, arithmetic, strings, booleans, <code>if</code>/<code>else</code>,
+          <code>while</code> and <code>for</code> loops, functions, recursion, and closures.
+        </p>
 
-            <div class="note-list">
-              <div class="issue-card">
-                <h4>Installer failed</h4>
-                <p>You need <code>curl</code> (macOS/Linux) or PowerShell (Windows) and network access. If Rust was just installed, open a new terminal and try again so <code>~/.cargo/bin</code> is on your PATH.</p>
-              </div>
-              <div class="issue-card">
-                <h4>cargo or rustc not found</h4>
-                <p>The one-line installer handles Rust for you. If installing manually, get it from <a href="https://rustup.rs" target="_blank" rel="noreferrer">rustup.rs</a> and restart your terminal.</p>
-              </div>
-              <div class="issue-card">
-                <h4>guppty not found after install</h4>
-                <p>The binary lives in <code>~/.cargo/bin</code> (or <code>C:\Users\You\.cargo\bin</code> on Windows). Check your PATH, or run <code>source "$HOME/.cargo/env"</code> and try again.</p>
-              </div>
-              <div class="issue-card">
-                <h4>Can't read my file</h4>
-                <p>Create a project with <code>guppty new my_program</code>, or pass a full source path: <code>guppty ./my_program.gup</code>.</p>
-              </div>
-              <div class="issue-card">
-                <h4>Indentation looks wrong</h4>
-                <p>Don't mix tabs and spaces. Use four spaces per level — that's what the examples use. One line at the wrong indent level can confuse the parser.</p>
-              </div>
-              <div class="issue-card">
-                <h4>How do I verify everything works?</h4>
-                <p>Run <code>guppty check</code> inside your project, or <code>cargo test</code> from a source checkout.</p>
-              </div>
-            </div>
-          </section>
+        <p>
+          It exists to answer a straightforward question: what actually happens when you type text into a
+          file and tell a computer to run it? Keeping the implementation small means you can add a keyword
+          and follow it through the lexer, parser, compiler, and virtual machine in one sitting.
+        </p>
 
-          <section class="docs-section" id="updates">
-            <p class="eyebrow">Updates</p>
-            <h2>Release Notes</h2>
-            <p>Version numbers live in <code>Cargo.toml</code>. Here's what's shipped and what's coming.</p>
+        <h2 id="internals">How it works</h2>
 
-            <div class="release-list">
-              <article>
-                <span class="release-label">Latest</span>
-                <h3>Version 0.2.0 · project toolchain</h3>
-                <p>Install from one terminal command, create manifest-backed projects, check and run their entry files, and build standalone native executables.</p>
-              </article>
-              <article>
-                <span class="release-label muted">v0.1.0</span>
-                <h3>Foundation</h3>
-                <p>Initial release: VM + interpreter backends, core language features, example programs with expected outputs, and integration tests.</p>
-              </article>
-              <article>
-                <span class="release-label muted">Coming</span>
-                <h3>Binary Downloads</h3>
-                <p>Prebuilt executables for macOS, Linux, and Windows via GitHub Releases — no Rust required. The one-line installer covers the from-source path today.</p>
-              </article>
-            </div>
-          </section>
-        </div>
+        <p>
+          Guppty is Rust 2021 with no external runtime dependencies. The pipeline is conventional:
+        </p>
+
+        <pre><code>source (.gup) -&gt; lexer (tokens) -&gt; parser (AST) -&gt; compiler (bytecode) -&gt; VM (stdout)</code></pre>
+
+        <p>
+          The lexer turns characters into tokens and tracks indentation. The parser builds an abstract
+          syntax tree. The compiler emits bytecode. The virtual machine executes that bytecode on a value
+          stack with call frames. Passing <code>--interp</code> skips compilation and walks the syntax tree
+          directly instead.
+        </p>
+
+        <dl>
+          <dt>Rust 2021</dt>
+          <dd>
+            A fast native binary, strong types for tokens, syntax tree, and bytecode, and Cargo for tests
+            and builds. The core uses no external crates.
+          </dd>
+
+          <dt>Stack virtual machine</dt>
+          <dd>
+            The default backend. Compiles to bytecode first, then executes it against a value stack and
+            call frames, in the same style as the Java, Python, and Lua virtual machines.
+          </dd>
+
+          <dt>Tree-walking interpreter</dt>
+          <dd>
+            The <code>--interp</code> path. Walks the syntax tree node by node. Simpler to follow, and
+            useful as a reference implementation for verifying the compiler.
+          </dd>
+
+          <dt>Integration tests</dt>
+          <dd>
+            Run real <code>.gup</code> programs and compare their output against the expected output
+            files, so the documented examples and the test suite are the same thing.
+          </dd>
+        </dl>
+
+        <h2 id="benchmarks">Benchmarks</h2>
+
+        <p>
+          <code>recursion_fib.gup</code> was run 200 times in release mode and the wall-clock time
+          averaged. The measurement covers startup, file input, lexing, parsing, compilation or
+          interpretation, and execution.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Backend</th>
+              <th>Average</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Virtual machine (compile and run)</td>
+              <td>2.69 ms</td>
+            </tr>
+            <tr>
+              <td>Tree-walking interpreter (<code>--interp</code>)</td>
+              <td>2.64 ms</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          At this size the difference is noise: the program is tiny, so startup and file reading dominate.
+          As programs grow, the virtual machine should pull ahead because it executes precompiled bytecode
+          rather than re-walking the syntax tree on every run.
+        </p>
+
+        <h2 id="contributing">Contributing</h2>
+
+        <p>
+          Fork the repository, create a branch, run <code>cargo test</code>, and open a pull request. Keep
+          each pull request focused on one change. If you add a language feature, include an example
+          <code>.gup</code> file and an expected output file so that it becomes a test automatically.
+        </p>
+
+        <ul>
+          <li>Install Guppty, or Rust from <a href="https://rustup.rs">rustup.rs</a>.</li>
+          <li>Run <code>cargo test</code> before opening a pull request.</li>
+          <li>Keep syntax keywords in <code>src/syntax.rs</code>.</li>
+          <li>Do not commit the <code>target/</code> build directory.</li>
+        </ul>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+
+        <dl>
+          <dt>The installer failed</dt>
+          <dd>
+            You need <code>curl</code> on macOS and Linux, or PowerShell on Windows, plus network access.
+            If Rust was just installed, open a new terminal so that <code>~/.cargo/bin</code> is on your
+            <code>PATH</code>, then try again.
+          </dd>
+
+          <dt><code>cargo</code> or <code>rustc</code> not found</dt>
+          <dd>
+            The install script handles Rust for you. When installing manually, get it from
+            <a href="https://rustup.rs">rustup.rs</a> and restart your terminal.
+          </dd>
+
+          <dt><code>guppty</code> not found after installing</dt>
+          <dd>
+            The binary lives in <code>~/.cargo/bin</code>, or <code>C:\Users\You\.cargo\bin</code> on
+            Windows. Check your <code>PATH</code>, or run <code>source "$HOME/.cargo/env"</code> and try
+            again.
+          </dd>
+
+          <dt>Guppty cannot read my file</dt>
+          <dd>
+            Create a project with <code>guppty new my_program</code>, or pass a source path explicitly:
+            <code>guppty ./my_program.gup</code>.
+          </dd>
+
+          <dt>Indentation errors</dt>
+          <dd>
+            Do not mix tabs and spaces. Use four spaces per level, as the examples do. A single line at
+            the wrong level will confuse the parser.
+          </dd>
+
+          <dt>Verifying an installation</dt>
+          <dd>
+            Run <code>guppty check</code> inside a project, or <code>cargo test</code> from a source
+            checkout.
+          </dd>
+        </dl>
+
+        <h2 id="releases">Release notes</h2>
+
+        <p>Version numbers are recorded in <code>Cargo.toml</code>.</p>
+
+        <dl>
+          <dt>0.2.0</dt>
+          <dd>
+            Project toolchain: install from a single command, create manifest-backed projects, check and
+            run their entry files, and build standalone native executables.
+          </dd>
+
+          <dt>0.1.0</dt>
+          <dd>
+            Initial release: virtual machine and interpreter backends, the core language features,
+            example programs with expected outputs, and integration tests.
+          </dd>
+
+          <dt>Unreleased</dt>
+          <dd>
+            Prebuilt executables for macOS, Linux, and Windows through GitHub Releases, so that Rust is
+            not required. The install script covers the from-source path today.
+          </dd>
+        </dl>
       </main>
     </div>
 
-    <script src="script.js"></script>
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>
+          Guppty is open source under the MIT license. The source and issue tracker are on
+          <a href="https://github.com/adrian-1-cardona/Guppty">GitHub</a>.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>
