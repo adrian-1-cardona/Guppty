@@ -46,8 +46,9 @@ body {
 }
 
 .wrap {
-  max-width: var(--measure);
-  margin: 0 auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
   padding: 0 var(--gutter);
 }
 
@@ -130,7 +131,7 @@ a:focus-visible {
   text-decoration: none;
 }
 
-/* Page frame: article left, contents right (git man-page layout) */
+/* Page frame: contents left, article right */
 
 .page {
   display: flex;
@@ -147,8 +148,8 @@ a:focus-visible {
   max-height: calc(100vh - 96px);
   overflow-y: auto;
   font-size: 13px;
-  padding-left: 16px;
-  border-left: 1px solid var(--border);
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
 }
 
 .sidebar h2 {
@@ -179,7 +180,6 @@ a:focus-visible {
 .sidebar a {
   display: block;
   padding: 3px 8px 3px 10px;
-  margin-left: -11px;
   color: var(--ink-soft);
   border-left: 3px solid transparent;
 }
@@ -600,6 +600,11 @@ tbody tr:hover td {
   }
 
   /* Keep article first on small screens; TOC follows after content. */
+  .content {
+    order: -1;
+    max-width: none;
+  }
+
   .sidebar {
     position: static;
     width: auto;
@@ -607,16 +612,8 @@ tbody tr:hover td {
     overflow: visible;
     margin: 28px 0 0;
     padding: 16px 0 0;
-    border-left: 0;
+    border-right: 0;
     border-top: 1px solid var(--border);
-  }
-
-  .sidebar a {
-    margin-left: 0;
-  }
-
-  .content {
-    max-width: none;
   }
 
   .ref-index {
