@@ -99,9 +99,6 @@ a:focus-visible {
 }
 
 .site-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   color: var(--ink);
   font-family: var(--serif);
   font-size: 22px;
@@ -111,16 +108,6 @@ a:focus-visible {
 .site-title:hover {
   color: var(--ink);
   text-decoration: none;
-}
-
-.site-title .mark {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  background: var(--orange);
-  color: #fff;
-  font: 700 14px/24px var(--sans);
-  text-align: center;
 }
 
 .site-nav {
