@@ -21,7 +21,7 @@
   --serif: Georgia, "Times New Roman", Times, serif;
   --mono: Menlo, Consolas, "Courier New", monospace;
 
-  --gutter: 24px;
+  --gutter: 16px;
   --sidebar: 220px;
   --measure: 1100px;
 }
@@ -49,7 +49,7 @@ body {
   max-width: none;
   width: 100%;
   margin: 0;
-  padding: 0 var(--gutter);
+  padding: 0 24px 0 12px;
 }
 
 a {
