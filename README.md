@@ -154,6 +154,12 @@ cargo install --path .
 
 See `CONTRIBUTING.md` for the short setup and pull request notes.
 
+## Research and citation
+
+Doing research with Guppty? Pin the exact release, follow [REPRODUCING.md](REPRODUCING.md), and use
+the citation in [CITATION.cff](CITATION.cff). The [changelog](CHANGELOG.md) tells you what moved
+between versions, and [AUTHORS.md](AUTHORS.md) explains how contributors are credited.
+
 ## License
 
 Guppty is available under the MIT License. See `LICENSE`.

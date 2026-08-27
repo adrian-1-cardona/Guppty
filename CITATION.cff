@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If Guppty helped your work, please cite this version so other people can run the same code :D"
+title: "Guppty: a small indentation-based programming language"
+type: software
+authors:
+  - family-names: Cardona
+    given-names: Adrian
+repository-code: "https://github.com/adrian-1-cardona/Guppty"
+url: "https://adrian-1-cardona.github.io/Guppty/"
+license: MIT
+version: 0.2.0
+keywords:
+  - programming-language
+  - compiler
+  - virtual-machine
+  - interpreter
