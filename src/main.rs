@@ -16,8 +16,28 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const EMBEDDED_MAGIC: &[u8] = b"\nGUPPTY_EMBEDDED_PROGRAM_V1\n";
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Manifest {
+    project: ProjectManifest,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectManifest {
+    name: String,
+    entry: PathBuf,
+}
+
+struct LoadedManifest {
+    path: PathBuf,
+    project: ProjectManifest,
+}
 
 fn main() {
     if let Some((filename, source)) = embedded_program() {
@@ -227,31 +247,67 @@ fn default_build_path(source: &Path) -> PathBuf {
 }
 
 fn project_name_from_manifest() -> Option<String> {
-    let manifest = fs::read_to_string("guppty.toml").ok()?;
-    manifest_value(&manifest, "name")
+    load_project_manifest()
+        .ok()
+        .map(|manifest| manifest.project.name)
 }
 
 fn resolve_source(requested: Option<&str>) -> Result<PathBuf, String> {
     if let Some(path) = requested {
         return Ok(PathBuf::from(path));
     }
-    let manifest = fs::read_to_string("guppty.toml").map_err(|_| {
-        "No file was provided and no guppty.toml was found. Run `guppty new <name>` first."
-            .to_string()
-    })?;
-    Ok(PathBuf::from(
-        manifest_value(&manifest, "entry").unwrap_or_else(|| "src/main.gup".to_string()),
-    ))
+    let manifest = load_project_manifest()?;
+    let root = manifest
+        .path
+        .parent()
+        .expect("a manifest path always has a parent");
+    Ok(root.join(manifest.project.entry))
 }
 
-fn manifest_value(manifest: &str, key: &str) -> Option<String> {
-    manifest.lines().find_map(|line| {
-        let (candidate, value) = line.split_once('=')?;
-        if candidate.trim() == key {
-            Some(value.trim().trim_matches('"').to_string())
-        } else {
-            None
-        }
+fn load_project_manifest() -> Result<LoadedManifest, String> {
+    let start =
+        env::current_dir().map_err(|error| format!("Could not read this folder: {error}"))?;
+    let path = start
+        .ancestors()
+        .map(|folder| folder.join("guppty.toml"))
+        .find(|candidate| candidate.is_file())
+        .ok_or_else(|| {
+            "No guppty.toml was found here or in a parent folder. Run `guppty new <name>` first."
+                .to_string()
+        })?;
+    let text = fs::read_to_string(&path)
+        .map_err(|error| format!("Could not read {}: {error}", path.display()))?;
+    let manifest: Manifest = toml::from_str(&text).map_err(|error| {
+        format!(
+            "{} has a project setting I cannot use: {error}",
+            path.display()
+        )
+    })?;
+
+    validate_project_name(&manifest.project.name)
+        .map_err(|error| format!("{}: project.name: {error}", path.display()))?;
+    if manifest
+        .project
+        .entry
+        .extension()
+        .and_then(|value| value.to_str())
+        != Some("gup")
+    {
+        return Err(format!(
+            "{}: project.entry must point to a .gup file.",
+            path.display()
+        ));
+    }
+    if manifest.project.entry.is_absolute() {
+        return Err(format!(
+            "{}: project.entry must stay inside the project and be a relative path.",
+            path.display()
+        ));
+    }
+
+    Ok(LoadedManifest {
+        path,
+        project: manifest.project,
     })
 }
 
