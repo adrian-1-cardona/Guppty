@@ -439,6 +439,24 @@ impl Vm {
             }
         }
 
+        if let (Value::GuppyNumber(left_num), Value::GuppyNumber(right_num)) = (&left, &right) {
+            let result = match op {
+                OpCode::Add => left_num.checked_add(*right_num),
+                OpCode::Sub => left_num.checked_sub(*right_num),
+                OpCode::Mul => left_num.checked_mul(*right_num),
+                OpCode::Div if *right_num == 0 => {
+                    return Err(self.runtime_error("Cannot divide by zero."));
+                }
+                OpCode::Div => left_num.checked_div(*right_num),
+                _ => return Err(self.runtime_error("Invalid math opcode.")),
+            };
+            let value = result.ok_or_else(|| {
+                self.runtime_error("Whole-number overflow. Try smaller values or use a float.")
+            })?;
+            self.push(Value::GuppyNumber(value));
+            return Ok(());
+        }
+
         let left_num = left.as_number().map_err(|msg| self.runtime_error(msg))?;
         let right_num = right.as_number().map_err(|msg| self.runtime_error(msg))?;
 
@@ -455,22 +473,21 @@ impl Vm {
             _ => return Err(self.runtime_error("Invalid math opcode.")),
         };
 
-        let is_float =
-            matches!(left, Value::GuppyFloat(_)) || matches!(right, Value::GuppyFloat(_));
-        if is_float {
-            self.push(Value::GuppyFloat(result));
-        } else {
-            self.push(Value::GuppyNumber(result as i64));
-        }
+        self.push(Value::GuppyFloat(result));
         Ok(())
     }
 
     fn negate_value(&self, value: Value) -> Result<Value, GupError> {
-        let number = value.as_number().map_err(|msg| self.runtime_error(msg))?;
-        if matches!(value, Value::GuppyFloat(_)) {
-            Ok(Value::GuppyFloat(-number))
-        } else {
-            Ok(Value::GuppyNumber(-number as i64))
+        match value {
+            Value::GuppyNumber(number) => number
+                .checked_neg()
+                .map(Value::GuppyNumber)
+                .ok_or_else(|| self.runtime_error("Whole-number overflow during negation.")),
+            Value::GuppyFloat(number) => Ok(Value::GuppyFloat(-number)),
+            other => Err(self.runtime_error(format!(
+                "Expected a number but got {}",
+                other.to_display_string()
+            ))),
         }
     }
 
@@ -478,7 +495,11 @@ impl Vm {
         let right = self.pop();
         let left = self.pop();
 
-        let result = if left.as_number().is_ok() && right.as_number().is_ok() {
+        let result = if let (Value::GuppyNumber(left_num), Value::GuppyNumber(right_num)) =
+            (&left, &right)
+        {
+            compare_integers(op, *left_num, *right_num)
+        } else if left.as_number().is_ok() && right.as_number().is_ok() {
             let left_num = left.as_number().unwrap_or(0.0);
             let right_num = right.as_number().unwrap_or(0.0);
             compare_numbers(op, left_num, right_num)
@@ -653,6 +674,18 @@ impl Vm {
 }
 
 fn compare_numbers(op: OpCode, left: f64, right: f64) -> bool {
+    match op {
+        OpCode::Equal => left == right,
+        OpCode::NotEqual => left != right,
+        OpCode::Less => left < right,
+        OpCode::Greater => left > right,
+        OpCode::LessEqual => left <= right,
+        OpCode::GreaterEqual => left >= right,
+        _ => false,
+    }
+}
+
+fn compare_integers(op: OpCode, left: i64, right: i64) -> bool {
     match op {
         OpCode::Equal => left == right,
         OpCode::NotEqual => left != right,
