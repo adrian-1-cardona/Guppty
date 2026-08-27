@@ -120,6 +120,34 @@ fn guppty_run_subcommand_executes_a_program() {
     assert!(stdout.contains("ran via subcommand"));
 }
 
+#[test]
+fn cli_rejects_unknown_repeated_and_misplaced_arguments() {
+    let bin = env!("CARGO_BIN_EXE_guppty");
+    let cases: &[&[&str]] = &[
+        &["run", "examples/hello.gup", "--definitely-not-real"],
+        &["examples/hello.gup", "--definitely-not-real"],
+        &["check", "examples/hello.gup", "--interp"],
+        &["run", "examples/hello.gup", "--interp", "--interp"],
+        &["help", "extra"],
+        &["init", "extra"],
+    ];
+
+    for arguments in cases {
+        let output = Command::new(bin)
+            .args(*arguments)
+            .output()
+            .expect("run command contract case");
+        assert!(
+            !output.status.success(),
+            "arguments {arguments:?} succeeded"
+        );
+        assert!(
+            !output.stderr.is_empty(),
+            "arguments {arguments:?} were silent"
+        );
+    }
+}
+
 fn run_temp_source(name: &str, source: &str) -> (String, i32) {
     let mut path = std::env::temp_dir();
     path.push(format!("guppty-{}-{}.gup", process::id(), name));

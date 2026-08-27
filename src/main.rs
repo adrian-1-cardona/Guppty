@@ -39,25 +39,26 @@ fn dispatch(args: &[String]) -> Result<(), String> {
     };
 
     match command {
-        "help" | "--help" | "-h" => {
+        "help" | "--help" | "-h" if args.len() == 1 => {
             print_help();
             Ok(())
         }
-        "version" | "--version" | "-V" => {
+        "version" | "--version" | "-V" if args.len() == 1 => {
             println!("guppty {VERSION}");
             Ok(())
         }
-        "new" => create_project(args.get(1).map(String::as_str)),
-        "init" => init_project(Path::new("."), None),
+        "new" if args.len() <= 2 => create_project(args.get(1).map(String::as_str)),
+        "new" => Err("Usage: guppty new <project-name>".to_string()),
+        "init" if args.len() == 1 => init_project(Path::new("."), None),
+        "init" => Err("Usage: guppty init".to_string()),
         "run" => {
-            let use_interpreter = args.iter().any(|arg| arg == "--interp");
-            let requested = positional_after_command(args, &["--interp"]);
+            let (requested, use_interpreter) = parse_source_args(&args[1..], true)?;
             let path = resolve_source(requested.as_deref())?;
             run_file(&path, use_interpreter);
             Ok(())
         }
         "check" => {
-            let requested = positional_after_command(args, &[]);
+            let (requested, _) = parse_source_args(&args[1..], false)?;
             let path = resolve_source(requested.as_deref())?;
             let source = read_source(&path)?;
             compile_source(&path.display().to_string(), &source);
@@ -68,7 +69,10 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         option if option.starts_with('-') => Err(format!("Unknown option: {option}")),
         filename => {
             let path = PathBuf::from(filename);
-            let use_interpreter = args.iter().any(|arg| arg == "--interp");
+            let (extra_path, use_interpreter) = parse_source_args(&args[1..], true)?;
+            if let Some(extra) = extra_path {
+                return Err(format!("Unexpected argument: {extra}"));
+            }
             run_file(&path, use_interpreter);
             Ok(())
         }
@@ -251,11 +255,35 @@ fn manifest_value(manifest: &str, key: &str) -> Option<String> {
     })
 }
 
-fn positional_after_command(args: &[String], flags: &[&str]) -> Option<String> {
-    args.iter()
-        .skip(1)
-        .find(|arg| !arg.starts_with('-') && !flags.contains(&arg.as_str()))
-        .cloned()
+fn parse_source_args(
+    args: &[String],
+    allow_interpreter: bool,
+) -> Result<(Option<String>, bool), String> {
+    let mut source = None;
+    let mut use_interpreter = false;
+    let mut options_ended = false;
+
+    for argument in args {
+        match argument.as_str() {
+            "--" if !options_ended => options_ended = true,
+            "--interp" if !options_ended && allow_interpreter && !use_interpreter => {
+                use_interpreter = true;
+            }
+            "--interp" if !options_ended && !allow_interpreter => {
+                return Err(
+                    "The check command does not run a backend, so --interp is not valid."
+                        .to_string(),
+                );
+            }
+            option if !options_ended && option.starts_with('-') => {
+                return Err(format!("Unknown option: {option}"));
+            }
+            value if source.is_none() => source = Some(value.to_string()),
+            extra => return Err(format!("Unexpected argument: {extra}")),
+        }
+    }
+
+    Ok((source, use_interpreter))
 }
 
 fn display_executable_path(path: &Path) -> String {
