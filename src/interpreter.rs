@@ -203,6 +203,11 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(Value::GuppyArray(values))
         }
+        ExprKind::Index { collection, index } => {
+            let collection = evaluate_expression(collection, env.clone())?;
+            let index_value = evaluate_expression(index, env)?;
+            index_array(collection, index_value, expr.span)
+        }
         ExprKind::Variable(name) => env
             .borrow()
             .get(name)
@@ -254,6 +259,28 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
                 return Ok(Value::Nothing);
             }
 
+            if name == "len" {
+                if evaluated_args.len() != 1 {
+                    return Err(GupError::runtime(
+                        expr.span,
+                        format!(
+                            "len() needs exactly one array, but got {} values.",
+                            evaluated_args.len()
+                        ),
+                    ));
+                }
+                return match &evaluated_args[0] {
+                    Value::GuppyArray(items) => Ok(Value::GuppyNumber(items.len() as i64)),
+                    other => Err(GupError::runtime(
+                        expr.span,
+                        format!(
+                            "len() needs an array, but got {}.",
+                            other.to_display_string()
+                        ),
+                    )),
+                };
+            }
+
             let function = env
                 .borrow()
                 .get(name)
@@ -278,6 +305,45 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
             "range() can only be used inside a for loop, like: for i in range(1 through 6).",
         )),
     }
+}
+
+fn index_array(collection: Value, index: Value, span: Span) -> Result<Value, GupError> {
+    let items = match collection {
+        Value::GuppyArray(items) => items,
+        other => {
+            return Err(GupError::runtime(
+                span,
+                format!(
+                    "You can only index an array, not {}.",
+                    other.to_display_string()
+                ),
+            ))
+        }
+    };
+    let index = match index {
+        Value::GuppyNumber(index) => index,
+        other => {
+            return Err(GupError::runtime(
+                span,
+                format!(
+                    "An array index must be a whole number, not {}.",
+                    other.to_display_string()
+                ),
+            ))
+        }
+    };
+    items
+        .get(usize::try_from(index).unwrap_or(usize::MAX))
+        .cloned()
+        .ok_or_else(|| {
+            GupError::runtime(
+                span,
+                format!(
+                    "Array index {index} is out of bounds for {} items.",
+                    items.len()
+                ),
+            )
+        })
 }
 
 fn call_function(

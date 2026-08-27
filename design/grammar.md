@@ -48,12 +48,13 @@ equality       → comparison (("==" | "!=") comparison)*
 comparison     → additive (("<" | ">" | "<=" | ">=") additive)*
 additive       → multiplicative (("+" | "-") multiplicative)*
 multiplicative → unary (("*" | "/") unary)*
-unary          → ("-" | "not") unary | primary
+unary          → ("-" | "not") unary | postfix
+postfix        → primary ("[" expression "]")*
 primary        → literal
                | IDENTIFIER
                | IDENTIFIER "(" arguments? ")"
                | "range" "(" expression "through" expression ")"
-               | "[" "]"
+               | "[" arguments? "]"
 ```
 
 ## Literals
@@ -73,6 +74,10 @@ literal        → STRING | CHAR | NUMBER | FLOAT | "true" | "false"
 | Function | Description |
 |----------|-------------|
 | `out(...)` | Print values to stdout (space-separated) |
+| `len(array)` | Return the number of items in an array |
+
+Arrays may contain mixed or nested values. Indexes start at zero and must be whole numbers.
+Negative or out-of-bounds indexes produce a located `IndexError`.
 
 ## Scoping
 
