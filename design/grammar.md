@@ -86,3 +86,5 @@ literal        → STRING | CHAR | NUMBER | FLOAT | "true" | "false"
   dedents that do not match an earlier block are errors.
 - `//` starts a line or inline comment.
 - Function definitions require an indented body after `name(...)`.
+- Whole-number math stays exact across the full signed 64-bit range. Whole-number overflow is a
+  runtime error. Math becomes floating point only when at least one input is a float.

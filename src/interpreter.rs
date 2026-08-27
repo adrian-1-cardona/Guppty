@@ -311,16 +311,17 @@ fn call_function(
 fn evaluate_unary_op(op: UnaryOp, value: &Value, span: Span) -> Result<Value, GupError> {
     match op {
         UnaryOp::Not => Ok(Value::GuppyBool(!value.is_truthy())),
-        UnaryOp::Negate => {
-            let number = value
-                .as_number()
-                .map_err(|msg| GupError::runtime(span, msg))?;
-            if matches!(value, Value::GuppyFloat(_)) {
-                Ok(Value::GuppyFloat(-number))
-            } else {
-                Ok(Value::GuppyNumber(-number as i64))
-            }
-        }
+        UnaryOp::Negate => match value {
+            Value::GuppyNumber(number) => number
+                .checked_neg()
+                .map(Value::GuppyNumber)
+                .ok_or_else(|| GupError::runtime(span, "Whole-number overflow during negation.")),
+            Value::GuppyFloat(number) => Ok(Value::GuppyFloat(-number)),
+            other => Err(GupError::runtime(
+                span,
+                format!("Expected a number but got {}", other.to_display_string()),
+            )),
+        },
     }
 }
 
@@ -353,6 +354,25 @@ fn evaluate_binary_op(
         return Ok(Value::GuppyBool(compare_values(left, op, right)));
     }
 
+    if let (Value::GuppyNumber(left_num), Value::GuppyNumber(right_num)) = (left, right) {
+        let result = match op {
+            BinaryOp::Add => left_num.checked_add(*right_num),
+            BinaryOp::Sub => left_num.checked_sub(*right_num),
+            BinaryOp::Mul => left_num.checked_mul(*right_num),
+            BinaryOp::Div if *right_num == 0 => {
+                return Err(GupError::runtime(span, "Cannot divide by zero."));
+            }
+            BinaryOp::Div => left_num.checked_div(*right_num),
+            _ => None,
+        };
+        return result.map(Value::GuppyNumber).ok_or_else(|| {
+            GupError::runtime(
+                span,
+                "Whole-number overflow. Try smaller values or use a float.",
+            )
+        });
+    }
+
     let left_num = left
         .as_number()
         .map_err(|msg| GupError::runtime(span, msg))?;
@@ -378,16 +398,21 @@ fn evaluate_binary_op(
         }
     };
 
-    let is_float = matches!(left, Value::GuppyFloat(_)) || matches!(right, Value::GuppyFloat(_));
-
-    if is_float {
-        Ok(Value::GuppyFloat(result))
-    } else {
-        Ok(Value::GuppyNumber(result as i64))
-    }
+    Ok(Value::GuppyFloat(result))
 }
 
 fn compare_values(left: &Value, op: BinaryOp, right: &Value) -> bool {
+    if let (Value::GuppyNumber(left_num), Value::GuppyNumber(right_num)) = (left, right) {
+        return match op {
+            BinaryOp::Equal => left_num == right_num,
+            BinaryOp::NotEqual => left_num != right_num,
+            BinaryOp::Less => left_num < right_num,
+            BinaryOp::Greater => left_num > right_num,
+            BinaryOp::LessEqual => left_num <= right_num,
+            BinaryOp::GreaterEqual => left_num >= right_num,
+            _ => false,
+        };
+    }
     if left.as_number().is_ok() && right.as_number().is_ok() {
         let left_num = left.as_number().unwrap_or(0.0);
         let right_num = right.as_number().unwrap_or(0.0);
