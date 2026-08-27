@@ -82,6 +82,7 @@ literal        → STRING | CHAR | NUMBER | FLOAT | "true" | "false"
 
 ## Notes
 
-- Indentation uses spaces or tabs (Python-style).
+- Indentation uses exactly four spaces per level. Tabs, mixed indentation, partial levels, and
+  dedents that do not match an earlier block are errors.
 - `//` starts a line or inline comment.
 - Function definitions require an indented body after `name(...)`.

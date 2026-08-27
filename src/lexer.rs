@@ -415,8 +415,27 @@ fn lex_line(line: &str, line_number: usize, start_column: usize) -> Result<Vec<T
     Ok(tokens)
 }
 
-fn measure_indent(line: &str) -> usize {
-    line.chars().take_while(|c| *c == ' ' || *c == '\t').count()
+fn measure_indent(line: &str, line_number: usize) -> Result<usize, GupError> {
+    let whitespace: String = line
+        .chars()
+        .take_while(|character| matches!(character, ' ' | '\t'))
+        .collect();
+
+    if let Some(tab_column) = whitespace.chars().position(|character| character == '\t') {
+        return Err(GupError::lex(
+            Span::new(line_number, tab_column + 1, 1),
+            "Guppty blocks use spaces only. Replace this tab with four spaces.",
+        ));
+    }
+
+    let indent = whitespace.len();
+    if indent % 4 != 0 {
+        return Err(GupError::lex(
+            Span::new(line_number, 1, indent.max(1)),
+            "Indent blocks with groups of four spaces.",
+        ));
+    }
+    Ok(indent)
 }
 
 /// turn the whole source file into a token list with indent/dedent markers
@@ -434,12 +453,21 @@ pub fn lex(source: &str) -> Result<Vec<Token>, GupError> {
             continue;
         }
 
-        let indent = measure_indent(line);
+        let indent = measure_indent(line, line_number)?;
 
         // less indent means a block ended — pop dedent tokens
+        let mut dedented = false;
         while indent < *indent_stack.last().unwrap() {
+            dedented = true;
             indent_stack.pop();
             push_token(&mut tokens, TokenKind::Dedent, line_number, indent + 1, 1);
+        }
+
+        if dedented && indent != *indent_stack.last().unwrap() {
+            return Err(GupError::lex(
+                Span::new(line_number, 1, indent.max(1)),
+                "This line does not line up with an earlier block. Use the same four-space level.",
+            ));
         }
 
         // more indent means a new block started — push indent token
@@ -618,6 +646,21 @@ mod tests {
 
         assert!(has_kind(&tokens, TokenKind::Indent));
         assert!(has_kind(&tokens, TokenKind::Dedent));
+    }
+
+    #[test]
+    fn rejects_tabs_and_partial_indentation() {
+        let tab_error = lex("if true\n\tout(1)\n").unwrap_err();
+        assert!(tab_error.message.contains("spaces only"));
+
+        let partial_error = lex("if true\n  out(1)\n").unwrap_err();
+        assert!(partial_error.message.contains("four spaces"));
+    }
+
+    #[test]
+    fn rejects_a_dedent_to_a_level_that_was_never_opened() {
+        let error = lex("if true\n        out(1)\n    out(2)\n").unwrap_err();
+        assert!(error.message.contains("does not line up"));
     }
 
     // -------------------------------------------------------------------------
