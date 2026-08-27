@@ -55,6 +55,7 @@ pub enum TokenKind {
     Indent,
     Dedent,
 
+    #[allow(clippy::upper_case_acronyms)] // Matches the spelling used by the language grammar.
     EOF,
 }
 

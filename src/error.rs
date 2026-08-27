@@ -50,6 +50,7 @@ pub enum ErrorPhase {
 /// A short, human-friendly "type of error", inspired by Python's exception
 /// names. This is the "what kind is it" part of a Guppty error message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)] // Public names intentionally read like familiar error types.
 pub enum ErrorKind {
     SyntaxError,
     IndentationError,
@@ -170,7 +171,7 @@ impl GupError {
             output.push_str(&format!("\n{} | {}", line_label, line_text));
 
             let pad = " ".repeat(self.span.column.saturating_sub(1));
-            let carets = "^".repeat(self.span.length.min(80).max(1));
+            let carets = "^".repeat(self.span.length.clamp(1, 80));
             output.push_str(&format!(
                 "\n{} | {}{} {} here",
                 gutter,
