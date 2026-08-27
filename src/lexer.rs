@@ -10,14 +10,23 @@ use crate::token::{Token, TokenKind};
 /// cut off // comments so they do not become code
 fn strip_comment(line: &str) -> &str {
     let mut in_string = false;
-    let chars: Vec<char> = line.chars().collect();
+    let mut escaped = false;
+    let mut chars = line.char_indices().peekable();
 
-    for i in 0..chars.len() {
-        if chars[i] == '"' {
-            in_string = !in_string;
-        } else if !in_string && chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
-            return &line[..i];
+    while let Some((byte_index, character)) = chars.next() {
+        if in_string && character == '\\' && !escaped {
+            escaped = true;
+            continue;
         }
+        if character == '"' && !escaped {
+            in_string = !in_string;
+        } else if !in_string
+            && character == '/'
+            && chars.peek().is_some_and(|(_, next)| *next == '/')
+        {
+            return &line[..byte_index];
+        }
+        escaped = false;
     }
 
     line
@@ -543,6 +552,23 @@ mod tests {
                 TokenKind::RightParen,
             ]
         );
+    }
+
+    #[test]
+    fn strips_comments_after_unicode_without_splitting_utf8() {
+        let tokens = lex("out(\"🔥\") // unicode before comment\n").expect("source should lex");
+        assert!(tokens
+            .iter()
+            .any(|token| token.kind == TokenKind::StringLiteral("🔥".to_string())));
+    }
+
+    #[test]
+    fn keeps_comment_markers_inside_strings() {
+        let tokens =
+            lex("out(\"🔥 // still a string\") // actual comment\n").expect("source should lex");
+        assert!(tokens.iter().any(|token| {
+            token.kind == TokenKind::StringLiteral("🔥 // still a string".to_string())
+        }));
     }
 
     // -------------------------------------------------------------------------
