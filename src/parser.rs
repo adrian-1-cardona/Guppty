@@ -574,7 +574,25 @@ impl Parser {
             ));
         }
 
-        self.parse_primary()
+        self.parse_postfix()
+    }
+
+    fn parse_postfix(&mut self) -> Result<Expr, GupError> {
+        let mut expression = self.parse_primary()?;
+        while *self.current_kind() == TokenKind::LeftBracket {
+            self.advance();
+            let index = self.parse_expression()?;
+            let close = self.expect_kind(&TokenKind::RightBracket)?;
+            let span = expression.span.merge(close.span);
+            expression = Expr::new(
+                ExprKind::Index {
+                    collection: Box::new(expression),
+                    index: Box::new(index),
+                },
+                span,
+            );
+        }
+        Ok(expression)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, GupError> {
@@ -613,18 +631,24 @@ impl Parser {
             }
             TokenKind::LeftBracket => {
                 let open = self.advance();
-                if *self.current_kind() == TokenKind::RightBracket {
-                    let close = self.advance();
-                    Ok(Expr::new(
-                        ExprKind::ArrayLiteral(Vec::new()),
-                        open.span.merge(close.span),
-                    ))
-                } else {
-                    Err(GupError::parse(
-                        self.current_span(),
-                        "Only empty arrays [] are supported right now.",
-                    ))
+                let mut items = Vec::new();
+                if *self.current_kind() != TokenKind::RightBracket {
+                    loop {
+                        items.push(self.parse_expression()?);
+                        if *self.current_kind() != TokenKind::Comma {
+                            break;
+                        }
+                        self.advance();
+                        if *self.current_kind() == TokenKind::RightBracket {
+                            break;
+                        }
+                    }
                 }
+                let close = self.expect_kind(&TokenKind::RightBracket)?;
+                Ok(Expr::new(
+                    ExprKind::ArrayLiteral(items),
+                    open.span.merge(close.span),
+                ))
             }
             TokenKind::Range => {
                 let range = self.advance();

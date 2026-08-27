@@ -403,6 +403,17 @@ for i in range(1 through 3)
 
 out(add(2, 3))</code></pre>
 
+        <h3 id="lang-arrays">Arrays</h3>
+        <p>
+          Put values between square brackets, grab one with a zero-based index, and use
+          <code>len()</code> when you want the size. Arrays can mix and nest values :D
+        </p>
+        <pre><code>friends = ["Ada", "Grace", "Linus"]
+out(friends[0])
+out(len(friends))
+nested = [[1, 2], [3, 4]]
+out(nested[1][0])</code></pre>
+
         <h3 id="lang-closures">Closures</h3>
         <p>A function defined inside another function keeps access to the enclosing scope.</p>
         <pre><code>makeAdder(x)

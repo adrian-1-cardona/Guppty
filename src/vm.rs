@@ -527,11 +527,20 @@ impl Vm {
                 )));
             }
         };
-        let index = index_val
-            .as_number()
-            .map_err(|msg| self.runtime_error(msg))? as i64;
+        let index = match index_val {
+            Value::GuppyNumber(index) => index,
+            other => {
+                return Err(self.runtime_error(format!(
+                    "An array index must be a whole number, not {}.",
+                    other.to_display_string()
+                )))
+            }
+        };
         if index < 0 || index as usize >= array.len() {
-            return Err(self.runtime_error("Array index out of bounds."));
+            return Err(self.runtime_error(format!(
+                "Array index {index} is out of bounds for {} items.",
+                array.len()
+            )));
         }
         Ok(array[index as usize].clone())
     }
