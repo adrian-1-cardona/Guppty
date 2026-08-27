@@ -1,6 +1,7 @@
 # Guppty
 
-Guppty is a small indentation-based programming language implemented in Rust.
+Guppty is a small indentation-based programming language implemented in Rust. Blocks use four
+spaces per level; tabs and partial indentation are rejected with a clear source error.
 It reads `.gup` files, turns them into tokens and an AST, compiles to bytecode,
 and runs the program on a stack-based virtual machine from the terminal.
 
