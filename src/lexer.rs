@@ -609,7 +609,8 @@ mod tests {
         let important = without_structure(&tokens);
 
         assert!(important.contains(&TokenKind::NumberLiteral(42)));
-        assert!(important.contains(&TokenKind::FloatLiteral(3.14)));
+        let decimal = 314.0 / 100.0;
+        assert!(important.contains(&TokenKind::FloatLiteral(decimal)));
     }
 
     // -------------------------------------------------------------------------

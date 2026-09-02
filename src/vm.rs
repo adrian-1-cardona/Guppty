@@ -392,14 +392,13 @@ impl Vm {
         let frame = self.current_frame();
         let function = frame.function.borrow();
         for (slot, desc) in function.upvalues.iter().enumerate() {
-            if desc.is_local {
-                if function
+            if desc.is_local
+                && function
                     .local_names
                     .get(desc.index as usize)
                     .is_some_and(|n| n == name)
-                {
-                    return Some(slot);
-                }
+            {
+                return Some(slot);
             }
         }
         None
@@ -428,15 +427,15 @@ impl Vm {
         let right = self.pop();
         let left = self.pop();
 
-        if op == OpCode::Add {
-            if matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)) {
-                self.push(Value::GuppyString(format!(
-                    "{}{}",
-                    left.to_display_string(),
-                    right.to_display_string()
-                )));
-                return Ok(());
-            }
+        if op == OpCode::Add
+            && (matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)))
+        {
+            self.push(Value::GuppyString(format!(
+                "{}{}",
+                left.to_display_string(),
+                right.to_display_string()
+            )));
+            return Ok(());
         }
 
         let left_num = left.as_number().map_err(|msg| self.runtime_error(msg))?;

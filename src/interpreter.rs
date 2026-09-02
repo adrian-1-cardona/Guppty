@@ -331,14 +331,14 @@ fn evaluate_binary_op(
     span: Span,
 ) -> Result<Value, GupError> {
     // string plus anything makes a bigger string
-    if op == BinaryOp::Add {
-        if matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)) {
-            return Ok(Value::GuppyString(format!(
-                "{}{}",
-                left.to_display_string(),
-                right.to_display_string()
-            )));
-        }
+    if op == BinaryOp::Add
+        && (matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)))
+    {
+        return Ok(Value::GuppyString(format!(
+            "{}{}",
+            left.to_display_string(),
+            right.to_display_string()
+        )));
     }
 
     if matches!(

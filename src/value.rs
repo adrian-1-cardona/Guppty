@@ -59,10 +59,6 @@ impl Value {
     /// is this value "truthy"? false and nothing are the only lies!
     /// this matters SO much because if/while use it to pick a path.
     pub fn is_truthy(&self) -> bool {
-        match self {
-            Value::GuppyBool(false) => false,
-            Value::Nothing => false,
-            _ => true,
-        }
+        !matches!(self, Value::GuppyBool(false) | Value::Nothing)
     }
 }
