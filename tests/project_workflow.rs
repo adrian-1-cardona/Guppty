@@ -105,3 +105,66 @@ fn build_creates_a_standalone_executable() {
 
     fs::remove_dir_all(workspace).expect("clean temporary workspace");
 }
+
+#[test]
+fn project_commands_find_and_resolve_a_valid_manifest_from_nested_folders() {
+    let workspace = temp_workspace("nested-manifest");
+    let source = workspace.join("source files/main.gup");
+    let nested = workspace.join("one/two");
+    fs::create_dir_all(source.parent().unwrap()).expect("create source folder");
+    fs::create_dir_all(&nested).expect("create nested folder");
+    fs::write(&source, "out(\"found my project :D\")\n").expect("write source");
+    fs::write(
+        workspace.join("guppty.toml"),
+        "# friendly comments are valid TOML\n[project]\nname = \"nested-project\"\nentry = \"source files/main.gup\"\n",
+    )
+    .expect("write manifest");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_guppty"))
+        .arg("run")
+        .current_dir(nested)
+        .output()
+        .expect("run nested project");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "found my project :D\n"
+    );
+
+    fs::remove_dir_all(workspace).expect("clean temporary workspace");
+}
+
+#[test]
+fn malformed_and_unknown_manifest_settings_fail_early() {
+    let binary = env!("CARGO_BIN_EXE_guppty");
+    for (label, manifest, expected) in [
+        ("malformed", "[project\nname = 3", "project setting"),
+        (
+            "unknown",
+            "[project]\nname = \"hello\"\nentry = \"main.gup\"\nsurprise = true\n",
+            "surprise",
+        ),
+        (
+            "wrong-entry",
+            "[project]\nname = \"hello\"\nentry = \"main.txt\"\n",
+            ".gup file",
+        ),
+    ] {
+        let workspace = temp_workspace(label);
+        fs::write(workspace.join("guppty.toml"), manifest).expect("write bad manifest");
+        let output = Command::new(binary)
+            .arg("run")
+            .current_dir(&workspace)
+            .output()
+            .expect("run bad manifest");
+        assert!(!output.status.success());
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains("guppty.toml"), "{stderr}");
+        assert!(stderr.contains(expected), "{stderr}");
+        fs::remove_dir_all(workspace).expect("clean temporary workspace");
+    }
+}
