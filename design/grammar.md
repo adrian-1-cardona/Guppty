@@ -1,5 +1,8 @@
 # Guppty Grammar
 
+> [!NOTE]
+> This grammar document is a non-normative quick reference. For the authoritative and versioned language definition, see the [Guppty Language Specification](specification.md).
+
 This grammar matches the interpreter in `src/`. Keywords live in `src/syntax.rs` so you can change them in one place.
 
 ## Program

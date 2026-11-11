@@ -237,6 +237,11 @@ impl Compiler {
                 self.emit_byte(OpCode::Pop, span);
             }
             self.contexts[self.current].locals.pop();
+            self.contexts[self.current]
+                .function
+                .borrow_mut()
+                .local_names
+                .pop();
         }
     }
 

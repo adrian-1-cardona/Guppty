@@ -140,6 +140,14 @@ docs/                Documentation site
 .github/workflows/   CI for build and test checks
 ```
 
+## Language Specification
+
+The authoritative normative specification of the language is available in [design/specification.md](design/specification.md). It formally defines lexical rules, strict 4-space indentation, truthiness, exact i64/f64 numeric semantics, control flow, scoping, closures, error taxonomy, and implementation limits.
+
+Non-normative quick references and tutorials:
+- [Grammar Guide](design/grammar.md)
+- [Syntax Overview](design/syntax.md)
+
 ## Development
 
 ```bash

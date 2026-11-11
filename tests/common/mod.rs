@@ -3,18 +3,21 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+#[allow(dead_code)]
 pub fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 // Guppty can run code through the VM or through the interpreter. The tests use
 // this enum to run the same file both ways.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Vm,
     Interpreter,
 }
 
+#[allow(dead_code)]
 impl Backend {
     // A friendly name to show in test messages so a human knows which
     // way was used when something goes wrong.
@@ -31,6 +34,7 @@ impl Backend {
     }
 }
 
+#[allow(dead_code)]
 pub fn run_gup_file_with_backend(file: &Path, backend: Backend) -> (String, String, i32) {
     let bin = env!("CARGO_BIN_EXE_guppty");
 
