@@ -1,22 +1,11 @@
-mod ast;
-mod bytecode;
-mod compiler;
-mod environment;
-mod error;
-mod interpreter;
-mod lexer;
-mod parser;
-mod syntax;
-mod token;
-mod value;
-mod vm;
-
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+
+use guppty::ExecutionEngine;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const EMBEDDED_MAGIC: &[u8] = b"\nGUPPTY_EMBEDDED_PROGRAM_V1\n";
@@ -41,7 +30,7 @@ struct LoadedManifest {
 
 fn main() {
     if let Some((filename, source)) = embedded_program() {
-        run_source(&filename, &source, false);
+        run_source(&filename, &source, false, false);
         return;
     }
 
@@ -72,13 +61,13 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         "init" if args.len() == 1 => init_project(Path::new("."), None),
         "init" => Err("Usage: guppty init".to_string()),
         "run" => {
-            let (requested, use_interpreter) = parse_source_args(&args[1..], true)?;
+            let (requested, use_interpreter, instrument) = parse_source_args(&args[1..], true)?;
             let path = resolve_source(requested.as_deref())?;
-            run_file(&path, use_interpreter);
+            run_file(&path, use_interpreter, instrument);
             Ok(())
         }
         "check" => {
-            let (requested, _) = parse_source_args(&args[1..], false)?;
+            let (requested, _, _) = parse_source_args(&args[1..], false)?;
             let path = resolve_source(requested.as_deref())?;
             let source = read_source(&path)?;
             compile_source(&path.display().to_string(), &source);
@@ -89,11 +78,11 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         option if option.starts_with('-') => Err(format!("Unknown option: {option}")),
         filename => {
             let path = PathBuf::from(filename);
-            let (extra_path, use_interpreter) = parse_source_args(&args[1..], true)?;
+            let (extra_path, use_interpreter, instrument) = parse_source_args(&args[1..], true)?;
             if let Some(extra) = extra_path {
                 return Err(format!("Unexpected argument: {extra}"));
             }
-            run_file(&path, use_interpreter);
+            run_file(&path, use_interpreter, instrument);
             Ok(())
         }
     }
@@ -112,6 +101,7 @@ Usage:\n  \
   guppty version          Show the installed version\n\n\
 Options:\n  \
   --interp                Use the tree-walking interpreter\n  \
+  --instrument, --stats   Print phase duration and telemetry metrics\n  \
   -o, --output <path>     Choose the build output path"
     );
 }
@@ -314,9 +304,10 @@ fn load_project_manifest() -> Result<LoadedManifest, String> {
 fn parse_source_args(
     args: &[String],
     allow_interpreter: bool,
-) -> Result<(Option<String>, bool), String> {
+) -> Result<(Option<String>, bool, bool), String> {
     let mut source = None;
     let mut use_interpreter = false;
+    let mut instrument = false;
     let mut options_ended = false;
 
     for argument in args {
@@ -331,6 +322,9 @@ fn parse_source_args(
                         .to_string(),
                 );
             }
+            "--instrument" | "--stats" if !options_ended => {
+                instrument = true;
+            }
             option if !options_ended && option.starts_with('-') => {
                 return Err(format!("Unknown option: {option}"));
             }
@@ -339,7 +333,7 @@ fn parse_source_args(
         }
     }
 
-    Ok((source, use_interpreter))
+    Ok((source, use_interpreter, instrument))
 }
 
 fn display_executable_path(path: &Path) -> String {
@@ -359,42 +353,68 @@ fn read_source(path: &Path) -> Result<String, String> {
     })
 }
 
-fn run_file(path: &Path, use_interpreter: bool) {
+fn run_file(path: &Path, use_interpreter: bool, instrument: bool) {
     let source = read_source(path).unwrap_or_else(|message| exit_with_message(message));
-    run_source(&path.display().to_string(), &source, use_interpreter);
+    run_source(
+        &path.display().to_string(),
+        &source,
+        use_interpreter,
+        instrument,
+    );
 }
 
 fn compile_source(filename: &str, source: &str) {
-    let tokens = lexer::lex(source).unwrap_or_else(|error| {
-        exit_with_message(error.render(filename, source));
-    });
-    let program = parser::parse(tokens).unwrap_or_else(|error| {
-        exit_with_message(error.render(filename, source));
-    });
-    let _ = compiler::compile(&program).unwrap_or_else(|error| {
+    guppty::check(source).unwrap_or_else(|error| {
         exit_with_message(error.render(filename, source));
     });
 }
 
-fn run_source(filename: &str, source: &str, use_interpreter: bool) {
-    let tokens = lexer::lex(source).unwrap_or_else(|error| {
-        exit_with_message(error.render(filename, source));
-    });
-    let program = parser::parse(tokens).unwrap_or_else(|error| {
-        exit_with_message(error.render(filename, source));
-    });
-
-    if use_interpreter {
-        interpreter::interpret(program).unwrap_or_else(|error| {
-            exit_with_message(error.render(filename, source));
-        });
+fn run_source(filename: &str, source: &str, use_interpreter: bool, instrument: bool) {
+    if instrument {
+        let engine = if use_interpreter {
+            ExecutionEngine::Interpreter
+        } else {
+            ExecutionEngine::Vm
+        };
+        match guppty::execute_instrumented(source, engine) {
+            Ok(stats) => {
+                eprintln!(
+                    "[Guppty Telemetry v{}] Lex: {:?} ({} tokens) | Parse: {:?} ({} stmts) | Compile: {:?} ({} bytes) | Exec: {:?} | Total: {:?}",
+                    stats.compiler_version,
+                    stats.lex_duration,
+                    stats.token_count,
+                    stats.parse_duration,
+                    stats.ast_statement_count,
+                    stats.compile_duration.unwrap_or_default(),
+                    stats.bytecode_bytes.unwrap_or_default(),
+                    stats.execute_duration,
+                    stats.total_duration,
+                );
+            }
+            Err(error) => {
+                exit_with_message(error.render(filename, source));
+            }
+        }
     } else {
-        let script = compiler::compile(&program).unwrap_or_else(|error| {
+        let tokens = guppty::lex(source).unwrap_or_else(|error| {
             exit_with_message(error.render(filename, source));
         });
-        vm::run(script).unwrap_or_else(|error| {
+        let program = guppty::parse(tokens).unwrap_or_else(|error| {
             exit_with_message(error.render(filename, source));
         });
+
+        if use_interpreter {
+            guppty::interpret(program).unwrap_or_else(|error| {
+                exit_with_message(error.render(filename, source));
+            });
+        } else {
+            let script = guppty::compile(&program).unwrap_or_else(|error| {
+                exit_with_message(error.render(filename, source));
+            });
+            guppty::run_vm(script).unwrap_or_else(|error| {
+                exit_with_message(error.render(filename, source));
+            });
+        }
     }
 }
 

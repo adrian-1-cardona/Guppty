@@ -6,9 +6,17 @@ rust-version = "1.82"
 description = "The Guppty programming language"
 license = "MIT"
 
+[lib]
+name = "guppty"
+path = "src/lib.rs"
+
 [[bin]]
 name = "guppty"
 path = "src/main.rs"
+
+[[example]]
+name = "embed_guppty"
+path = "examples/embed_guppty.rs"
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
