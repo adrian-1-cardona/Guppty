@@ -8,6 +8,7 @@ use crate::ast::{BinaryOp, Expr, ExprKind, Program, Stmt, StmtKind, UnaryOp};
 use crate::environment::{Environment, GuppyFunction};
 use crate::error::{GupError, Span};
 use crate::lexer::is_print_function;
+use crate::limits::ResourceLimits;
 use crate::value::Value;
 
 /// when a statement finishes we say either "keep going" or "return this value!"
@@ -16,8 +17,27 @@ enum ExecResult {
     Return(Value),
 }
 
+/// Execution state tracking runtime resource consumption.
+pub struct InterpreterState {
+    pub limits: ResourceLimits,
+    pub call_depth: usize,
+    pub step_count: usize,
+    pub bytes_printed: usize,
+}
+
+#[allow(dead_code)]
 pub fn interpret(program: Program) -> Result<(), GupError> {
+    interpret_with_limits(program, ResourceLimits::default())
+}
+
+pub fn interpret_with_limits(program: Program, limits: ResourceLimits) -> Result<(), GupError> {
     let env = Environment::new();
+    let mut state = InterpreterState {
+        limits,
+        call_depth: 0,
+        step_count: 0,
+        bytes_printed: 0,
+    };
 
     // first pass: register all top-level functions so they can call each other
     for statement in &program {
@@ -35,22 +55,36 @@ pub fn interpret(program: Program) -> Result<(), GupError> {
     // second pass: run everything that is not a function definition
     for statement in &program {
         if !matches!(&statement.kind, StmtKind::FunctionDef { .. }) {
-            execute_statement(statement, env.clone())?;
+            execute_statement(statement, env.clone(), &mut state)?;
         }
     }
 
     Ok(())
 }
 
-fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecResult, GupError> {
+fn execute_statement(
+    stmt: &Stmt,
+    env: Rc<RefCell<Environment>>,
+    state: &mut InterpreterState,
+) -> Result<ExecResult, GupError> {
+    state.step_count += 1;
+    if let Some(max_steps) = state.limits.max_steps {
+        if state.step_count > max_steps {
+            return Err(GupError::runtime(
+                stmt.span,
+                format!("Execution step limit of {} exceeded.", max_steps),
+            ));
+        }
+    }
+
     match &stmt.kind {
         StmtKind::ExpressionStatement(expr) => {
-            evaluate_expression(expr, env)?;
+            evaluate_expression(expr, env, state)?;
             Ok(ExecResult::Continue)
         }
 
         StmtKind::VariableDeclaration { name, value } => {
-            let evaluated = evaluate_expression(value, env.clone())?;
+            let evaluated = evaluate_expression(value, env.clone(), state)?;
             let mut env_ref = env.borrow_mut();
 
             if env_ref.exists(name) {
@@ -69,12 +103,12 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecR
             then_branch,
             else_branch,
         } => {
-            let condition_value = evaluate_expression(condition, env.clone())?;
+            let condition_value = evaluate_expression(condition, env.clone(), state)?;
 
             if condition_value.is_truthy() {
-                execute_block(then_branch, env)
+                execute_block(then_branch, env, state)
             } else if let Some(else_body) = else_branch {
-                execute_block(else_body, env)
+                execute_block(else_body, env, state)
             } else {
                 Ok(ExecResult::Continue)
             }
@@ -82,12 +116,12 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecR
 
         StmtKind::WhileLoop { condition, body } => {
             loop {
-                let condition_value = evaluate_expression(condition, env.clone())?;
+                let condition_value = evaluate_expression(condition, env.clone(), state)?;
                 if !condition_value.is_truthy() {
                     break;
                 }
 
-                match execute_block(body, env.clone())? {
+                match execute_block(body, env.clone(), state)? {
                     ExecResult::Return(value) => return Ok(ExecResult::Return(value)),
                     ExecResult::Continue => {}
                 }
@@ -101,25 +135,87 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecR
             iterable,
             body,
         } => {
-            let values = evaluate_iterable(iterable, env.clone())?;
+            match &iterable.kind {
+                ExprKind::Range { start, end } => {
+                    let start_val = evaluate_expression(start, env.clone(), state)?;
+                    let end_val = evaluate_expression(end, env.clone(), state)?;
 
-            for value in values {
-                env.borrow_mut().define(variable.clone(), value);
+                    let start_num = start_val
+                        .as_number()
+                        .map_err(|msg| GupError::runtime(start.span, msg))?;
+                    let end_num = end_val
+                        .as_number()
+                        .map_err(|msg| GupError::runtime(end.span, msg))?;
 
-                match execute_block(body, env.clone())? {
-                    ExecResult::Return(return_value) => {
-                        return Ok(ExecResult::Return(return_value));
+                    let start_i = start_num as i64;
+                    let end_i = end_num as i64;
+                    let count = end_i.abs_diff(start_i).saturating_add(1);
+                    if count > state.limits.max_range_size as u64 {
+                        return Err(GupError::runtime(
+                            iterable.span,
+                            format!(
+                                "Range size of {} exceeds maximum allowed limit of {}.",
+                                count, state.limits.max_range_size
+                            ),
+                        ));
                     }
-                    ExecResult::Continue => {}
+
+                    // Stream range iteration without allocating a vector
+                    let step: i64 = if start_i <= end_i { 1 } else { -1 };
+                    let mut curr = start_i;
+                    loop {
+                        env.borrow_mut()
+                            .define(variable.clone(), Value::GuppyNumber(curr));
+
+                        match execute_block(body, env.clone(), state)? {
+                            ExecResult::Return(return_value) => {
+                                return Ok(ExecResult::Return(return_value));
+                            }
+                            ExecResult::Continue => {}
+                        }
+
+                        if curr == end_i {
+                            break;
+                        }
+                        curr += step;
+                    }
+
+                    Ok(ExecResult::Continue)
+                }
+                _ => {
+                    let evaluated = evaluate_expression(iterable, env.clone(), state)?;
+                    let items = match evaluated {
+                        Value::GuppyArray(items) => items,
+                        other => {
+                            return Err(GupError::runtime(
+                                iterable.span,
+                                format!(
+                                    "Can only loop over a range or array, not {}.",
+                                    other.to_display_string()
+                                ),
+                            ));
+                        }
+                    };
+
+                    for value in items {
+                        env.borrow_mut().define(variable.clone(), value);
+
+                        match execute_block(body, env.clone(), state)? {
+                            ExecResult::Return(return_value) => {
+                                return Ok(ExecResult::Return(return_value));
+                            }
+                            ExecResult::Continue => {}
+                        }
+                    }
+
+                    Ok(ExecResult::Continue)
                 }
             }
-
-            Ok(ExecResult::Continue)
         }
 
         StmtKind::ReturnStatement { value } => {
             let return_value = match value {
-                Some(expr) => evaluate_expression(expr, env)?,
+                Some(expr) => evaluate_expression(expr, env, state)?,
                 None => Value::Nothing,
             };
             Ok(ExecResult::Return(return_value))
@@ -141,11 +237,12 @@ fn execute_statement(stmt: &Stmt, env: Rc<RefCell<Environment>>) -> Result<ExecR
 fn execute_block(
     statements: &[Stmt],
     env: Rc<RefCell<Environment>>,
+    state: &mut InterpreterState,
 ) -> Result<ExecResult, GupError> {
     let block_env = Environment::with_parent(env);
 
     for stmt in statements {
-        match execute_statement(stmt, block_env.clone())? {
+        match execute_statement(stmt, block_env.clone(), state)? {
             ExecResult::Return(value) => return Ok(ExecResult::Return(value)),
             ExecResult::Continue => {}
         }
@@ -154,42 +251,11 @@ fn execute_block(
     Ok(ExecResult::Continue)
 }
 
-fn evaluate_iterable(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Vec<Value>, GupError> {
-    match &expr.kind {
-        ExprKind::Range { start, end } => {
-            let start_val = evaluate_expression(start, env.clone())?;
-            let end_val = evaluate_expression(end, env)?;
-
-            let start_num = start_val
-                .as_number()
-                .map_err(|msg| GupError::runtime(start.span, msg))?;
-            let end_num = end_val
-                .as_number()
-                .map_err(|msg| GupError::runtime(end.span, msg))?;
-
-            let mut values = Vec::new();
-            let mut current = start_num as i64;
-            let end = end_num as i64;
-
-            if current <= end {
-                while current <= end {
-                    values.push(Value::GuppyNumber(current));
-                    current += 1;
-                }
-            } else {
-                while current >= end {
-                    values.push(Value::GuppyNumber(current));
-                    current -= 1;
-                }
-            }
-
-            Ok(values)
-        }
-        _ => Ok(vec![evaluate_expression(expr, env)?]),
-    }
-}
-
-fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Value, GupError> {
+fn evaluate_expression(
+    expr: &Expr,
+    env: Rc<RefCell<Environment>>,
+    state: &mut InterpreterState,
+) -> Result<Value, GupError> {
     match &expr.kind {
         ExprKind::StringLiteral(text) => Ok(Value::GuppyString(text.clone())),
         ExprKind::CharLiteral(ch) => Ok(Value::GuppyChar(*ch)),
@@ -199,7 +265,7 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
         ExprKind::ArrayLiteral(items) => {
             let values = items
                 .iter()
-                .map(|item| evaluate_expression(item, env.clone()))
+                .map(|item| evaluate_expression(item, env.clone(), state))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(Value::GuppyArray(values))
         }
@@ -208,49 +274,60 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
             .get(name)
             .map_err(|msg| GupError::runtime(expr.span, msg)),
         ExprKind::UnaryOp { op, operand } => {
-            let value = evaluate_expression(operand, env)?;
+            let value = evaluate_expression(operand, env, state)?;
             evaluate_unary_op(*op, &value, expr.span)
         }
         ExprKind::BinaryOp { left, op, right } => {
             // and / or short-circuit — skip the second side when the answer is known
             if *op == BinaryOp::And {
-                let left_val = evaluate_expression(left, env.clone())?;
+                let left_val = evaluate_expression(left, env.clone(), state)?;
                 if !left_val.is_truthy() {
                     return Ok(Value::GuppyBool(false));
                 }
-                let right_val = evaluate_expression(right, env)?;
+                let right_val = evaluate_expression(right, env, state)?;
                 return Ok(Value::GuppyBool(right_val.is_truthy()));
             }
 
             if *op == BinaryOp::Or {
-                let left_val = evaluate_expression(left, env.clone())?;
+                let left_val = evaluate_expression(left, env.clone(), state)?;
                 if left_val.is_truthy() {
                     return Ok(Value::GuppyBool(true));
                 }
-                let right_val = evaluate_expression(right, env)?;
+                let right_val = evaluate_expression(right, env, state)?;
                 return Ok(Value::GuppyBool(right_val.is_truthy()));
             }
 
-            let left_val = evaluate_expression(left, env.clone())?;
-            let right_val = evaluate_expression(right, env)?;
+            let left_val = evaluate_expression(left, env.clone(), state)?;
+            let right_val = evaluate_expression(right, env, state)?;
             evaluate_binary_op(&left_val, *op, &right_val, expr.span)
         }
         ExprKind::FunctionCall { name, args } => {
             let evaluated_args: Vec<Value> = args
                 .iter()
-                .map(|arg| evaluate_expression(arg, env.clone()))
+                .map(|arg| evaluate_expression(arg, env.clone(), state))
                 .collect::<Result<Vec<_>, _>>()?;
 
             if is_print_function(name) {
-                if evaluated_args.is_empty() {
-                    println!();
+                let line = if evaluated_args.is_empty() {
+                    String::new()
                 } else {
                     let output: Vec<String> = evaluated_args
                         .iter()
                         .map(|v| v.to_display_string())
                         .collect();
-                    println!("{}", output.join(" "));
+                    output.join(" ")
+                };
+                let line_bytes = line.len() + 1;
+                if let Some(max_output) = state.limits.max_output_bytes {
+                    if state.bytes_printed.saturating_add(line_bytes) > max_output {
+                        return Err(GupError::runtime(
+                            expr.span,
+                            format!("Output volume limit of {} bytes exceeded.", max_output),
+                        ));
+                    }
                 }
+                state.bytes_printed += line_bytes;
+                println!("{}", line);
                 return Ok(Value::Nothing);
             }
 
@@ -261,7 +338,7 @@ fn evaluate_expression(expr: &Expr, env: Rc<RefCell<Environment>>) -> Result<Val
 
             match function {
                 Value::GuppyFunction(function) => {
-                    call_function(function, evaluated_args, expr.span)
+                    call_function(function, evaluated_args, expr.span, state)
                 }
                 other => Err(GupError::runtime(
                     expr.span,
@@ -284,6 +361,7 @@ fn call_function(
     function: GuppyFunction,
     args: Vec<Value>,
     call_span: Span,
+    state: &mut InterpreterState,
 ) -> Result<Value, GupError> {
     if function.params.len() != args.len() {
         return Err(GupError::runtime(
@@ -296,13 +374,27 @@ fn call_function(
         ));
     }
 
+    if state.call_depth >= state.limits.max_call_depth {
+        return Err(GupError::runtime(
+            call_span,
+            format!(
+                "Maximum call stack depth of {} exceeded.",
+                state.limits.max_call_depth
+            ),
+        ));
+    }
+
     let call_env = Environment::with_parent(function.closure);
 
     for (param, arg) in function.params.iter().zip(args) {
         call_env.borrow_mut().define(param.clone(), arg);
     }
 
-    match execute_block(&function.body, call_env)? {
+    state.call_depth += 1;
+    let result = execute_block(&function.body, call_env, state);
+    state.call_depth -= 1;
+
+    match result? {
         ExecResult::Return(value) => Ok(value),
         ExecResult::Continue => Ok(Value::Nothing),
     }

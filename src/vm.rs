@@ -14,6 +14,7 @@ use crate::bytecode::{
     decode_opcode, ClosureUpvalue, ClosureValue, Constant, OpCode, RcCompiledFunction,
 };
 use crate::error::{ErrorKind, GupError, Span};
+use crate::limits::ResourceLimits;
 use crate::value::Value;
 
 /// One active function call — where we are in the recipe and our local plates.
@@ -33,11 +34,23 @@ pub struct Vm {
     frames: Vec<CallFrame>,
     globals: HashMap<String, Value>,
     open_upvalues: Vec<Rc<RefCell<ClosureUpvalue>>>,
+    limits: ResourceLimits,
+    step_count: usize,
+    bytes_printed: usize,
 }
 
-/// Run a compiled script function from start to finish.
+/// Run a compiled script function from start to finish with default limits.
+#[allow(dead_code)]
 pub fn run(function: RcCompiledFunction) -> Result<(), GupError> {
-    let mut vm = Vm::new();
+    run_with_limits(function, ResourceLimits::default())
+}
+
+/// Run a compiled script function with custom resource limits.
+pub fn run_with_limits(
+    function: RcCompiledFunction,
+    limits: ResourceLimits,
+) -> Result<(), GupError> {
+    let mut vm = Vm::with_limits(limits);
     vm.frames.push(CallFrame {
         function,
         ip: 0,
@@ -50,12 +63,20 @@ pub fn run(function: RcCompiledFunction) -> Result<(), GupError> {
 }
 
 impl Vm {
-    fn new() -> Self {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self::with_limits(ResourceLimits::default())
+    }
+
+    pub fn with_limits(limits: ResourceLimits) -> Self {
         Vm {
             stack: Vec::new(),
             frames: Vec::new(),
             globals: HashMap::new(),
             open_upvalues: Vec::new(),
+            limits,
+            step_count: 0,
+            bytes_printed: 0,
         }
     }
 
@@ -67,8 +88,15 @@ impl Vm {
         self.frames.last_mut().expect("VM always has a call frame")
     }
 
-    fn push(&mut self, value: Value) {
+    fn push(&mut self, value: Value) -> Result<(), GupError> {
+        if self.stack.len() >= self.limits.max_stack_size {
+            return Err(self.runtime_error(format!(
+                "Value stack overflow: exceeded limit of {} values.",
+                self.limits.max_stack_size
+            )));
+        }
         self.stack.push(value);
+        Ok(())
     }
 
     fn pop(&mut self) -> Value {
@@ -143,6 +171,16 @@ impl Vm {
                 return Ok(());
             }
 
+            self.step_count += 1;
+            if let Some(max_steps) = self.limits.max_steps {
+                if self.step_count > max_steps {
+                    return Err(self.runtime_error(format!(
+                        "Execution step limit of {} exceeded.",
+                        max_steps
+                    )));
+                }
+            }
+
             let ip = self.current_frame().ip;
             let code_len = self.current_frame().function.borrow().chunk.code.len();
             if ip >= code_len {
@@ -159,18 +197,20 @@ impl Vm {
             match instruction {
                 OpCode::Constant => {
                     let index = self.read_byte();
-                    self.push(self.constant_value(index)?);
+                    let val = self.constant_value(index)?;
+                    self.push(val)?;
                 }
-                OpCode::Nil => self.push(Value::Nothing),
-                OpCode::True => self.push(Value::GuppyBool(true)),
-                OpCode::False => self.push(Value::GuppyBool(false)),
+                OpCode::Nil => self.push(Value::Nothing)?,
+                OpCode::True => self.push(Value::GuppyBool(true))?,
+                OpCode::False => self.push(Value::GuppyBool(false))?,
                 OpCode::Pop => {
                     self.pop();
                 }
                 OpCode::GetLocal => {
                     let slot = self.read_byte();
                     self.ensure_local_slot(slot);
-                    self.push(self.stack[self.slot_index(slot)].clone());
+                    let val = self.stack[self.slot_index(slot)].clone();
+                    self.push(val)?;
                 }
                 OpCode::SetLocal => {
                     let slot = self.read_byte();
@@ -185,7 +225,7 @@ impl Vm {
                     let value = self.globals.get(&name).cloned().ok_or_else(|| {
                         self.runtime_error(format!("Variable '{}' is not defined yet!", name))
                     })?;
-                    self.push(value);
+                    self.push(value)?;
                 }
                 OpCode::SetGlobal => {
                     let index = self.read_byte();
@@ -206,7 +246,8 @@ impl Vm {
                 }
                 OpCode::GetUpvalue => {
                     let slot = self.read_byte() as usize;
-                    self.push(self.read_upvalue(slot)?);
+                    let val = self.read_upvalue(slot)?;
+                    self.push(val)?;
                 }
                 OpCode::SetUpvalue => {
                     let slot = self.read_byte() as usize;
@@ -226,7 +267,8 @@ impl Vm {
                 OpCode::GetVariable => {
                     let index = self.read_byte();
                     let name = self.constant_name(index)?;
-                    self.push(self.get_variable(&name)?);
+                    let val = self.get_variable(&name)?;
+                    self.push(val)?;
                 }
                 OpCode::Add => self.binary_op(OpCode::Add)?,
                 OpCode::Sub => self.binary_op(OpCode::Sub)?,
@@ -234,11 +276,12 @@ impl Vm {
                 OpCode::Div => self.binary_op(OpCode::Div)?,
                 OpCode::Negate => {
                     let value = self.pop();
-                    self.push(self.negate_value(value)?);
+                    let val = self.negate_value(value)?;
+                    self.push(val)?;
                 }
                 OpCode::Not => {
                     let value = self.pop();
-                    self.push(Value::GuppyBool(!value.is_truthy()));
+                    self.push(Value::GuppyBool(!value.is_truthy()))?;
                 }
                 OpCode::Equal => self.compare_values(OpCode::Equal)?,
                 OpCode::NotEqual => self.compare_values(OpCode::NotEqual)?,
@@ -281,7 +324,7 @@ impl Vm {
                     while self.stack.len() > stack_start {
                         self.pop();
                     }
-                    self.push(value);
+                    self.push(value)?;
                 }
                 OpCode::Closure => {
                     let constant = self.read_byte();
@@ -298,17 +341,19 @@ impl Vm {
                         items.push(self.pop());
                     }
                     items.reverse();
-                    self.push(Value::GuppyArray(items));
+                    self.push(Value::GuppyArray(items))?;
                 }
                 OpCode::BuildRange => {
                     let end_val = self.pop();
                     let start_val = self.pop();
-                    self.push(self.build_range(start_val, end_val)?);
+                    let range_arr = self.build_range(start_val, end_val)?;
+                    self.push(range_arr)?;
                 }
                 OpCode::GetIndex => {
                     let index_val = self.pop();
                     let array_val = self.pop();
-                    self.push(self.get_index(array_val, index_val)?);
+                    let item = self.get_index(array_val, index_val)?;
+                    self.push(item)?;
                 }
                 OpCode::ArrayLen => {
                     let array_val = self.pop();
@@ -321,7 +366,7 @@ impl Vm {
                             )));
                         }
                     };
-                    self.push(Value::GuppyNumber(len));
+                    self.push(Value::GuppyNumber(len))?;
                 }
             }
         }
@@ -362,7 +407,7 @@ impl Vm {
 
         if self.current_frame().scope_depth > 0 {
             let index = self.stack.len();
-            self.push(value);
+            self.push(value)?;
             self.current_frame_mut()
                 .local_slots
                 .insert(name.to_string(), index);
@@ -434,7 +479,7 @@ impl Vm {
                 "{}{}",
                 left.to_display_string(),
                 right.to_display_string()
-            )));
+            )))?;
             return Ok(());
         }
 
@@ -457,9 +502,9 @@ impl Vm {
         let is_float =
             matches!(left, Value::GuppyFloat(_)) || matches!(right, Value::GuppyFloat(_));
         if is_float {
-            self.push(Value::GuppyFloat(result));
+            self.push(Value::GuppyFloat(result))?;
         } else {
-            self.push(Value::GuppyNumber(result as i64));
+            self.push(Value::GuppyNumber(result as i64))?;
         }
         Ok(())
     }
@@ -487,7 +532,7 @@ impl Vm {
             compare_strings(op, &left_text, &right_text)
         };
 
-        self.push(Value::GuppyBool(result));
+        self.push(Value::GuppyBool(result))?;
         Ok(())
     }
 
@@ -497,9 +542,19 @@ impl Vm {
             .map_err(|msg| self.runtime_error(msg))?;
         let end_num = end_val.as_number().map_err(|msg| self.runtime_error(msg))?;
 
-        let mut values = Vec::new();
-        let mut current = start_num as i64;
+        let start = start_num as i64;
         let end = end_num as i64;
+
+        let count = end.abs_diff(start).saturating_add(1);
+        if count > self.limits.max_range_size as u64 {
+            return Err(self.runtime_error(format!(
+                "Range size of {} exceeds maximum allowed limit of {}.",
+                count, self.limits.max_range_size
+            )));
+        }
+
+        let mut values = Vec::with_capacity(count as usize);
+        let mut current = start;
 
         if current <= end {
             while current <= end {
@@ -536,17 +591,28 @@ impl Vm {
     }
 
     fn print_args(&mut self, arg_count: usize) -> Result<(), GupError> {
-        if arg_count == 0 {
-            println!();
+        let line = if arg_count == 0 {
+            String::new()
         } else {
             let mut parts = Vec::with_capacity(arg_count);
             for _ in 0..arg_count {
                 parts.push(self.pop().to_display_string());
             }
             parts.reverse();
-            println!("{}", parts.join(" "));
+            parts.join(" ")
+        };
+        let line_bytes = line.len() + 1;
+        if let Some(max_output) = self.limits.max_output_bytes {
+            if self.bytes_printed.saturating_add(line_bytes) > max_output {
+                return Err(self.runtime_error(format!(
+                    "Output volume limit of {} bytes exceeded.",
+                    max_output
+                )));
+            }
         }
-        self.push(Value::Nothing);
+        self.bytes_printed += line_bytes;
+        println!("{}", line);
+        self.push(Value::Nothing)?;
         Ok(())
     }
 
@@ -567,6 +633,13 @@ impl Vm {
     }
 
     fn call_closure(&mut self, closure: ClosureValue, arg_count: usize) -> Result<(), GupError> {
+        if self.frames.len() >= self.limits.max_call_depth {
+            return Err(self.runtime_error(format!(
+                "Maximum call stack depth of {} exceeded.",
+                self.limits.max_call_depth
+            )));
+        }
+
         let function = closure.function.borrow();
         if function.arity != arg_count {
             return Err(self.runtime_error(format!(
@@ -613,7 +686,7 @@ impl Vm {
             upvalues.push(upvalue);
         }
 
-        self.push(Value::GuppyClosure(ClosureValue { function, upvalues }));
+        self.push(Value::GuppyClosure(ClosureValue { function, upvalues }))?;
         Ok(())
     }
 

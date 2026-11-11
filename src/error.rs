@@ -328,6 +328,38 @@ fn classify(phase: ErrorPhase, message: &str) -> (ErrorKind, String) {
             "Use an array here, like [] or a variable that holds an array.".to_string(),
         );
     }
+    if contains("call stack depth") {
+        return (
+            ErrorKind::RuntimeError,
+            "Check for runaway or infinite recursion, or increase the maximum call depth limit."
+                .to_string(),
+        );
+    }
+    if contains("value stack overflow") {
+        return (
+            ErrorKind::RuntimeError,
+            "Simplify deep expressions or loops, or increase the maximum stack size limit."
+                .to_string(),
+        );
+    }
+    if contains("range size") {
+        return (
+            ErrorKind::RuntimeError,
+            "Narrow the range bounds or increase the maximum range size limit.".to_string(),
+        );
+    }
+    if contains("step limit") {
+        return (
+            ErrorKind::RuntimeError,
+            "Check for infinite loops or increase the execution step limit.".to_string(),
+        );
+    }
+    if contains("output volume") {
+        return (
+            ErrorKind::RuntimeError,
+            "Reduce print volume or increase the output volume limit.".to_string(),
+        );
+    }
     if contains("index out of bounds") {
         return (
             ErrorKind::IndexError,

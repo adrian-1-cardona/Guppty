@@ -5,6 +5,7 @@ mod environment;
 mod error;
 mod interpreter;
 mod lexer;
+mod limits;
 mod parser;
 mod syntax;
 mod token;
@@ -41,7 +42,12 @@ struct LoadedManifest {
 
 fn main() {
     if let Some((filename, source)) = embedded_program() {
-        run_source(&filename, &source, false);
+        run_source(
+            &filename,
+            &source,
+            false,
+            limits::ResourceLimits::from_env(),
+        );
         return;
     }
 
@@ -72,13 +78,13 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         "init" if args.len() == 1 => init_project(Path::new("."), None),
         "init" => Err("Usage: guppty init".to_string()),
         "run" => {
-            let (requested, use_interpreter) = parse_source_args(&args[1..], true)?;
+            let (requested, use_interpreter, limits) = parse_source_args(&args[1..], true)?;
             let path = resolve_source(requested.as_deref())?;
-            run_file(&path, use_interpreter);
+            run_file(&path, use_interpreter, limits);
             Ok(())
         }
         "check" => {
-            let (requested, _) = parse_source_args(&args[1..], false)?;
+            let (requested, _, _) = parse_source_args(&args[1..], false)?;
             let path = resolve_source(requested.as_deref())?;
             let source = read_source(&path)?;
             compile_source(&path.display().to_string(), &source);
@@ -89,11 +95,11 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         option if option.starts_with('-') => Err(format!("Unknown option: {option}")),
         filename => {
             let path = PathBuf::from(filename);
-            let (extra_path, use_interpreter) = parse_source_args(&args[1..], true)?;
+            let (extra_path, use_interpreter, limits) = parse_source_args(&args[1..], true)?;
             if let Some(extra) = extra_path {
                 return Err(format!("Unexpected argument: {extra}"));
             }
-            run_file(&path, use_interpreter);
+            run_file(&path, use_interpreter, limits);
             Ok(())
         }
     }
@@ -112,7 +118,14 @@ Usage:\n  \
   guppty version          Show the installed version\n\n\
 Options:\n  \
   --interp                Use the tree-walking interpreter\n  \
-  -o, --output <path>     Choose the build output path"
+  -o, --output <path>     Choose the build output path\n  \
+  --conservative          Apply conservative resource limits for untrusted code\n  \
+  --unlimited             Disable resource limits\n  \
+  --max-call-depth <N>    Maximum call stack depth (default: 1000)\n  \
+  --max-stack-size <N>    Maximum value stack size (default: 10000)\n  \
+  --max-range-size <N>    Maximum range element count (default: 1000000)\n  \
+  --max-steps <N>         Maximum execution steps (default: none)\n  \
+  --max-output-bytes <N>  Maximum output bytes (default: none)"
     );
 }
 
@@ -314,12 +327,15 @@ fn load_project_manifest() -> Result<LoadedManifest, String> {
 fn parse_source_args(
     args: &[String],
     allow_interpreter: bool,
-) -> Result<(Option<String>, bool), String> {
+) -> Result<(Option<String>, bool, limits::ResourceLimits), String> {
     let mut source = None;
     let mut use_interpreter = false;
     let mut options_ended = false;
+    let mut res_limits = limits::ResourceLimits::from_env();
+    let mut index = 0;
 
-    for argument in args {
+    while index < args.len() {
+        let argument = &args[index];
         match argument.as_str() {
             "--" if !options_ended => options_ended = true,
             "--interp" if !options_ended && allow_interpreter && !use_interpreter => {
@@ -331,15 +347,69 @@ fn parse_source_args(
                         .to_string(),
                 );
             }
+            "--conservative" if !options_ended => {
+                res_limits = limits::ResourceLimits::conservative();
+            }
+            "--unlimited" if !options_ended => {
+                res_limits = limits::ResourceLimits::unlimited();
+            }
+            "--max-call-depth" if !options_ended => {
+                index += 1;
+                let val = args
+                    .get(index)
+                    .ok_or_else(|| "--max-call-depth needs a number".to_string())?;
+                res_limits.max_call_depth = val
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid limit for --max-call-depth: {val}"))?;
+            }
+            "--max-stack-size" if !options_ended => {
+                index += 1;
+                let val = args
+                    .get(index)
+                    .ok_or_else(|| "--max-stack-size needs a number".to_string())?;
+                res_limits.max_stack_size = val
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid limit for --max-stack-size: {val}"))?;
+            }
+            "--max-range-size" if !options_ended => {
+                index += 1;
+                let val = args
+                    .get(index)
+                    .ok_or_else(|| "--max-range-size needs a number".to_string())?;
+                res_limits.max_range_size = val
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid limit for --max-range-size: {val}"))?;
+            }
+            "--max-steps" if !options_ended => {
+                index += 1;
+                let val = args
+                    .get(index)
+                    .ok_or_else(|| "--max-steps needs a number".to_string())?;
+                let n = val
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid limit for --max-steps: {val}"))?;
+                res_limits.max_steps = if n == 0 { None } else { Some(n) };
+            }
+            "--max-output-bytes" if !options_ended => {
+                index += 1;
+                let val = args
+                    .get(index)
+                    .ok_or_else(|| "--max-output-bytes needs a number".to_string())?;
+                let n = val
+                    .parse::<usize>()
+                    .map_err(|_| format!("Invalid limit for --max-output-bytes: {val}"))?;
+                res_limits.max_output_bytes = if n == 0 { None } else { Some(n) };
+            }
             option if !options_ended && option.starts_with('-') => {
                 return Err(format!("Unknown option: {option}"));
             }
             value if source.is_none() => source = Some(value.to_string()),
             extra => return Err(format!("Unexpected argument: {extra}")),
         }
+        index += 1;
     }
 
-    Ok((source, use_interpreter))
+    Ok((source, use_interpreter, res_limits))
 }
 
 fn display_executable_path(path: &Path) -> String {
@@ -359,9 +429,14 @@ fn read_source(path: &Path) -> Result<String, String> {
     })
 }
 
-fn run_file(path: &Path, use_interpreter: bool) {
+fn run_file(path: &Path, use_interpreter: bool, limits: limits::ResourceLimits) {
     let source = read_source(path).unwrap_or_else(|message| exit_with_message(message));
-    run_source(&path.display().to_string(), &source, use_interpreter);
+    run_source(
+        &path.display().to_string(),
+        &source,
+        use_interpreter,
+        limits,
+    );
 }
 
 fn compile_source(filename: &str, source: &str) {
@@ -376,7 +451,7 @@ fn compile_source(filename: &str, source: &str) {
     });
 }
 
-fn run_source(filename: &str, source: &str, use_interpreter: bool) {
+fn run_source(filename: &str, source: &str, use_interpreter: bool, limits: limits::ResourceLimits) {
     let tokens = lexer::lex(source).unwrap_or_else(|error| {
         exit_with_message(error.render(filename, source));
     });
@@ -385,14 +460,14 @@ fn run_source(filename: &str, source: &str, use_interpreter: bool) {
     });
 
     if use_interpreter {
-        interpreter::interpret(program).unwrap_or_else(|error| {
+        interpreter::interpret_with_limits(program, limits).unwrap_or_else(|error| {
             exit_with_message(error.render(filename, source));
         });
     } else {
         let script = compiler::compile(&program).unwrap_or_else(|error| {
             exit_with_message(error.render(filename, source));
         });
-        vm::run(script).unwrap_or_else(|error| {
+        vm::run_with_limits(script, limits).unwrap_or_else(|error| {
             exit_with_message(error.render(filename, source));
         });
     }
