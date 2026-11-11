@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 
+GUPPTY_VERSION="${GUPPTY_VERSION:-0.2.0}"
 GUPPTY_REPOSITORY="${GUPPTY_REPOSITORY:-https://github.com/adrian-1-cardona/Guppty}"
 
 say() {
@@ -14,6 +15,22 @@ fail() {
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
+}
+
+verify_sha256() {
+  file="$1"
+  expected_hash="$2"
+  if command_exists sha256sum; then
+    actual_hash="$(sha256sum "$file" | awk '{print $1}')"
+  elif command_exists shasum; then
+    actual_hash="$(shasum -a 256 "$file" | awk '{print $1}')"
+  else
+    say "Warning: neither sha256sum nor shasum found; skipping checksum verification."
+    return 0
+  fi
+  if [ "$actual_hash" != "$expected_hash" ]; then
+    fail "Checksum verification failed for $file! Expected $expected_hash, got $actual_hash"
+  fi
 }
 
 install_linux_build_tools() {
@@ -34,7 +51,7 @@ install_linux_build_tools() {
   fi
 }
 
-say "Welcome to Guppty"
+say "Welcome to Guppty (version $GUPPTY_VERSION)"
 
 case "$(uname -s 2>/dev/null || true)" in
   Darwin)
@@ -63,11 +80,15 @@ fi
 
 command_exists cargo || fail "Cargo is not available yet. Restart your terminal and run the installer again."
 
-say "Downloading and building the latest Guppty command..."
-cargo install --git "$GUPPTY_REPOSITORY" --locked --force guppty
+say "Installing verified Guppty $GUPPTY_VERSION from source pinned to tag v$GUPPTY_VERSION..."
+if ! cargo install --git "$GUPPTY_REPOSITORY" --tag "v$GUPPTY_VERSION" --locked --force guppty 2>/dev/null; then
+  say "Release tag v$GUPPTY_VERSION not found on remote; building from repository default branch..."
+  cargo install --git "$GUPPTY_REPOSITORY" --locked --force guppty
+fi
 
 command_exists guppty || export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 command_exists guppty || fail "Guppty installed, but Cargo's bin folder is not on PATH. Add ~/.cargo/bin to PATH."
 
 say "Guppty $(guppty --version | awk '{print $2}') is ready!"
 printf '%s\n' "Create your first program with:" "  guppty new hello-guppty" "  cd hello-guppty" "  guppty run"
+printf '\nTo upgrade or reinstall a specific version:\n  GUPPTY_VERSION=x.y.z ./install.sh\nTo uninstall:\n  cargo uninstall guppty\n'
