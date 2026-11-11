@@ -1,0 +1,13 @@
+makeCounter(start)
+    count = start
+    tick()
+        count = count + 1
+        return count
+    return tick
+
+c = makeCounter(0)
+i = 0
+while i < 5000
+    c()
+    i = i + 1
+out(c())
