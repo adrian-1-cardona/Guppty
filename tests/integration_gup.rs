@@ -239,3 +239,34 @@ fn divide_by_zero_reports_a_math_error_with_help() {
     assert!(stderr.contains("help:"));
     assert!(!stderr.contains("panicked at"));
 }
+
+#[test]
+fn compiler_constant_limit_reports_located_error_not_panic() {
+    let mut source = String::new();
+    for i in 0..260 {
+        source.push_str(&format!("x{i} = \"string_{i}\"\n"));
+    }
+    let (stderr, exit_code) = run_temp_source("constant-limit", &source);
+    assert_ne!(exit_code, 0);
+    assert!(
+        stderr.contains("Too many constants") || stderr.contains("limit is 256"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("panicked at"), "{stderr}");
+}
+
+#[test]
+fn compiler_call_argument_limit_reports_located_error_not_panic() {
+    let args = (0..260)
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let source = format!("out({args})\n");
+    let (stderr, exit_code) = run_temp_source("arg-limit", &source);
+    assert_ne!(exit_code, 0);
+    assert!(
+        stderr.contains("Too many") && stderr.contains("arguments"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("panicked at"), "{stderr}");
+}

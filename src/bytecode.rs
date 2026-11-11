@@ -258,3 +258,171 @@ pub fn encode_opcode(op: OpCode) -> u8 {
         OpCode::ArrayLen => 39,
     }
 }
+
+/// Validate that a bytecode chunk is well-formed before execution.
+pub fn validate_chunk(chunk: &Chunk) -> Result<(), crate::error::GupError> {
+    let mut ip = 0;
+    while ip < chunk.code.len() {
+        let op_byte = chunk.code[ip];
+        let span = chunk.spans.get(ip).copied().unwrap_or(Span::new(1, 1, 1));
+        let op = decode_opcode(op_byte).ok_or_else(|| {
+            crate::error::GupError::runtime(span, format!("Invalid bytecode opcode: {op_byte}."))
+        })?;
+        ip += 1;
+
+        match op {
+            OpCode::Constant
+            | OpCode::GetLocal
+            | OpCode::SetLocal
+            | OpCode::GetGlobal
+            | OpCode::SetGlobal
+            | OpCode::DefineGlobal
+            | OpCode::GetUpvalue
+            | OpCode::SetUpvalue
+            | OpCode::GetVariable
+            | OpCode::StoreVariable
+            | OpCode::Call
+            | OpCode::Print
+            | OpCode::MakeArray => {
+                if ip >= chunk.code.len() {
+                    return Err(crate::error::GupError::runtime(
+                        span,
+                        "Bytecode instruction missing 1-byte operand.",
+                    ));
+                }
+                let operand = chunk.code[ip];
+                ip += 1;
+
+                match op {
+                    OpCode::Constant => {
+                        if (operand as usize) >= chunk.constants.len() {
+                            return Err(crate::error::GupError::runtime(
+                                span,
+                                format!(
+                                    "Constant index {operand} out of bounds (total {}).",
+                                    chunk.constants.len()
+                                ),
+                            ));
+                        }
+                    }
+                    OpCode::GetGlobal
+                    | OpCode::SetGlobal
+                    | OpCode::DefineGlobal
+                    | OpCode::GetVariable
+                    | OpCode::StoreVariable => {
+                        if (operand as usize) >= chunk.constants.len() {
+                            return Err(crate::error::GupError::runtime(
+                                span,
+                                format!("Variable name index {operand} out of bounds."),
+                            ));
+                        }
+                        if !matches!(&chunk.constants[operand as usize], Constant::String(_)) {
+                            return Err(crate::error::GupError::runtime(
+                                span,
+                                format!(
+                                    "Expected string constant for variable name at index {operand}."
+                                ),
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            OpCode::Closure => {
+                if ip >= chunk.code.len() {
+                    return Err(crate::error::GupError::runtime(
+                        span,
+                        "Closure instruction missing operand.",
+                    ));
+                }
+                let operand = chunk.code[ip];
+                ip += 1;
+                if (operand as usize) >= chunk.constants.len() {
+                    return Err(crate::error::GupError::runtime(
+                        span,
+                        format!("Closure constant index {operand} out of bounds."),
+                    ));
+                }
+                match &chunk.constants[operand as usize] {
+                    Constant::Function(func) => {
+                        validate_function(&func.borrow())?;
+                    }
+                    _ => {
+                        return Err(crate::error::GupError::runtime(
+                            span,
+                            "Closure constant must be a compiled function.",
+                        ));
+                    }
+                }
+            }
+            OpCode::Jump | OpCode::JumpIfFalse | OpCode::Loop => {
+                if ip + 1 >= chunk.code.len() {
+                    return Err(crate::error::GupError::runtime(
+                        span,
+                        "Jump instruction missing 2-byte operand.",
+                    ));
+                }
+                let high = chunk.code[ip] as u16;
+                let low = chunk.code[ip + 1] as u16;
+                let offset = ((high << 8) | low) as usize;
+                ip += 2;
+                if op == OpCode::Loop {
+                    if offset > ip {
+                        return Err(crate::error::GupError::runtime(
+                            span,
+                            "Loop jump offset underflows bytecode bounds.",
+                        ));
+                    }
+                } else if ip + offset > chunk.code.len() {
+                    return Err(crate::error::GupError::runtime(
+                        span,
+                        "Jump destination exceeds chunk bytecode bounds.",
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// Validate a compiled function and all its embedded chunks.
+pub fn validate_function(function: &CompiledFunction) -> Result<(), crate::error::GupError> {
+    validate_chunk(&function.chunk)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validates_empty_and_normal_chunks() {
+        let mut chunk = Chunk::new();
+        chunk.write(encode_opcode(OpCode::Nil), Span::new(1, 1, 1));
+        chunk.write(encode_opcode(OpCode::Return), Span::new(1, 1, 1));
+        assert!(validate_chunk(&chunk).is_ok());
+    }
+
+    #[test]
+    fn rejects_unknown_opcode() {
+        let mut chunk = Chunk::new();
+        chunk.write(254, Span::new(1, 1, 1));
+        assert!(validate_chunk(&chunk).is_err());
+    }
+
+    #[test]
+    fn rejects_out_of_bounds_constant() {
+        let mut chunk = Chunk::new();
+        chunk.write(encode_opcode(OpCode::Constant), Span::new(1, 1, 1));
+        chunk.write(5, Span::new(1, 1, 1)); // no constants in pool
+        assert!(validate_chunk(&chunk).is_err());
+    }
+
+    #[test]
+    fn rejects_truncated_jump_operand() {
+        let mut chunk = Chunk::new();
+        chunk.write(encode_opcode(OpCode::Jump), Span::new(1, 1, 1));
+        chunk.write(0, Span::new(1, 1, 1)); // only 1 byte instead of 2
+        assert!(validate_chunk(&chunk).is_err());
+    }
+}

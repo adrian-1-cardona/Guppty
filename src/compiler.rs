@@ -66,9 +66,9 @@ pub fn compile(program: &Program) -> Result<RcCompiledFunction, GupError> {
     for stmt in program {
         if let StmtKind::FunctionDef { name, params, body } = &stmt.kind {
             let function = compiler.compile_function(params, body, stmt.span)?;
-            let constant = compiler.add_constant(Constant::Function(function));
+            let constant = compiler.add_constant(Constant::Function(function), stmt.span)?;
             compiler.emit_bytes(OpCode::Closure, &[constant], stmt.span);
-            compiler.define_global(name, stmt.span);
+            compiler.define_global(name, stmt.span)?;
         }
     }
 
@@ -170,40 +170,58 @@ impl Compiler {
         offset
     }
 
-    fn patch_jump(&mut self, offset: usize) {
+    fn patch_jump(&mut self, offset: usize, span: Span) -> Result<(), GupError> {
         let jump = self.chunk().current_offset() - offset - 2;
+        if jump > u16::MAX as usize {
+            return Err(GupError::runtime(
+                span,
+                "Too much code to jump over (limit is 65535 bytes).",
+            ));
+        }
         self.chunk_mut().patch_u16(offset, jump as u16);
+        Ok(())
     }
 
-    fn emit_loop(&mut self, loop_start: usize, span: Span) {
+    fn emit_loop(&mut self, loop_start: usize, span: Span) -> Result<(), GupError> {
         self.emit_byte(OpCode::Loop, span);
         let offset = self.chunk().current_offset() - loop_start + 2;
+        if offset > u16::MAX as usize {
+            return Err(GupError::runtime(
+                span,
+                "Loop body too large to jump back (limit is 65535 bytes).",
+            ));
+        }
         self.chunk_mut().write((offset >> 8) as u8, span);
         self.chunk_mut().write((offset & 0xff) as u8, span);
+        Ok(())
     }
 
-    fn add_constant(&mut self, constant: Constant) -> u8 {
+    fn add_constant(&mut self, constant: Constant, span: Span) -> Result<u8, GupError> {
         let index = self.chunk_mut().add_constant(constant);
         if index > u8::MAX as usize {
-            panic!("Too many constants in one chunk.");
+            return Err(GupError::runtime(
+                span,
+                "Too many constants in one chunk (limit is 256).",
+            ));
         }
-        index as u8
+        Ok(index as u8)
     }
 
-    fn make_constant(&mut self, value: Constant, span: Span) -> u8 {
-        let index = self.add_constant(value);
+    fn make_constant(&mut self, value: Constant, span: Span) -> Result<u8, GupError> {
+        let index = self.add_constant(value, span)?;
         self.emit_bytes(OpCode::Constant, &[index], span);
-        index
+        Ok(index)
     }
 
-    fn add_string_constant(&mut self, text: &str) -> u8 {
-        self.add_constant(Constant::String(text.to_string()))
+    fn add_string_constant(&mut self, text: &str, span: Span) -> Result<u8, GupError> {
+        self.add_constant(Constant::String(text.to_string()), span)
     }
 
-    fn define_global(&mut self, name: &str, span: Span) {
-        let constant = self.add_string_constant(name);
+    fn define_global(&mut self, name: &str, span: Span) -> Result<(), GupError> {
+        let constant = self.add_string_constant(name, span)?;
         self.emit_bytes(OpCode::DefineGlobal, &[constant], span);
         self.globals.insert(name.to_string(), true);
+        Ok(())
     }
 
     fn begin_scope(&mut self, span: Span) {
@@ -240,9 +258,15 @@ impl Compiler {
         }
     }
 
-    fn declare_variable(&mut self, name: &str) {
+    fn declare_variable(&mut self, name: &str, span: Span) -> Result<(), GupError> {
         if self.contexts[self.current].scope_depth == 0 {
-            return;
+            return Ok(());
+        }
+        if self.contexts[self.current].locals.len() >= 256 {
+            return Err(GupError::runtime(
+                span,
+                "Too many local variables in function (limit is 256).",
+            ));
         }
         let depth = self.contexts[self.current].scope_depth;
         self.contexts[self.current].locals.push(Local {
@@ -255,6 +279,7 @@ impl Compiler {
             .borrow_mut()
             .local_names
             .push(name.to_string());
+        Ok(())
     }
 
     fn resolve_local_in(&self, ctx_index: usize, name: &str) -> Option<u8> {
@@ -283,73 +308,99 @@ impl Compiler {
         self.resolve_local_in(self.current, name)
     }
 
-    fn add_upvalue(&mut self, index: u8, is_local: bool) -> Option<u8> {
+    fn add_upvalue(&mut self, index: u8, is_local: bool, span: Span) -> Result<u8, GupError> {
         let ctx = &mut self.contexts[self.current];
         for (i, upvalue) in ctx.upvalues.iter().enumerate() {
             if upvalue.index == index && upvalue.is_local == is_local {
-                return Some(i as u8);
+                return Ok(i as u8);
             }
         }
-        if ctx.upvalues.len() >= u8::MAX as usize {
-            return None;
+        if ctx.upvalues.len() >= 256 {
+            return Err(GupError::runtime(
+                span,
+                "Too many upvalues in closure (limit is 256).",
+            ));
         }
         ctx.upvalues.push(Upvalue { index, is_local });
-        Some((ctx.upvalues.len() - 1) as u8)
+        Ok((ctx.upvalues.len() - 1) as u8)
     }
 
-    fn resolve_upvalue(&mut self, name: &str) -> Option<u8> {
-        let enclosing = self.contexts[self.current].enclosing?;
+    fn resolve_upvalue(&mut self, name: &str, span: Span) -> Result<Option<u8>, GupError> {
+        let enclosing = match self.contexts[self.current].enclosing {
+            Some(enc) => enc,
+            None => return Ok(None),
+        };
 
         if let Some(local) = self.resolve_local_in(enclosing, name) {
             self.contexts[enclosing].locals[local as usize].is_captured = true;
-            return self.add_upvalue(local, true);
+            return self.add_upvalue(local, true, span).map(Some);
         }
 
-        if let Some(upvalue) = self.resolve_upvalue_in(enclosing, name) {
+        if let Some(upvalue) = self.resolve_upvalue_in(enclosing, name, span)? {
             let up = self.contexts[enclosing].upvalues[upvalue as usize];
-            return self.add_upvalue(up.index, up.is_local);
+            return self.add_upvalue(up.index, up.is_local, span).map(Some);
         }
 
-        None
+        Ok(None)
     }
 
-    fn resolve_upvalue_in(&mut self, ctx_index: usize, name: &str) -> Option<u8> {
-        let enclosing = self.contexts[ctx_index].enclosing?;
+    fn resolve_upvalue_in(
+        &mut self,
+        ctx_index: usize,
+        name: &str,
+        span: Span,
+    ) -> Result<Option<u8>, GupError> {
+        let enclosing = match self.contexts[ctx_index].enclosing {
+            Some(enc) => enc,
+            None => return Ok(None),
+        };
 
         if let Some(local) = self.resolve_local_in(enclosing, name) {
             self.contexts[enclosing].locals[local as usize].is_captured = true;
             let ctx = &mut self.contexts[ctx_index];
             for (i, upvalue) in ctx.upvalues.iter().enumerate() {
                 if upvalue.index == local && upvalue.is_local {
-                    return Some(i as u8);
+                    return Ok(Some(i as u8));
                 }
+            }
+            if ctx.upvalues.len() >= 256 {
+                return Err(GupError::runtime(
+                    span,
+                    "Too many upvalues in closure (limit is 256).",
+                ));
             }
             ctx.upvalues.push(Upvalue {
                 index: local,
                 is_local: true,
             });
-            return Some((ctx.upvalues.len() - 1) as u8);
+            return Ok(Some((ctx.upvalues.len() - 1) as u8));
         }
 
-        if let Some(upvalue) = self.resolve_upvalue_in(enclosing, name) {
+        if let Some(upvalue) = self.resolve_upvalue_in(enclosing, name, span)? {
             let up = self.contexts[enclosing].upvalues[upvalue as usize];
             let ctx = &mut self.contexts[ctx_index];
             for (i, existing) in ctx.upvalues.iter().enumerate() {
                 if existing.index == up.index && existing.is_local == up.is_local {
-                    return Some(i as u8);
+                    return Ok(Some(i as u8));
                 }
             }
+            if ctx.upvalues.len() >= 256 {
+                return Err(GupError::runtime(
+                    span,
+                    "Too many upvalues in closure (limit is 256).",
+                ));
+            }
             ctx.upvalues.push(up);
-            return Some((ctx.upvalues.len() - 1) as u8);
+            return Ok(Some((ctx.upvalues.len() - 1) as u8));
         }
 
-        None
+        Ok(None)
     }
 
     fn named_variable(&mut self, name: &str, span: Span, can_assign: bool) -> Result<(), GupError> {
         if let Some(local) = self.resolve_local(name) {
             if !can_assign && self.contexts[self.current].dynamic_locals.contains(name) {
-                let constant = self.add_string_constant(name);
+                let constant = self.add_string_constant(name, span)?;
                 self.emit_bytes(OpCode::GetVariable, &[constant], span);
                 return Ok(());
             }
@@ -362,7 +413,7 @@ impl Compiler {
             return Ok(());
         }
 
-        if let Some(upvalue) = self.resolve_upvalue(name) {
+        if let Some(upvalue) = self.resolve_upvalue(name, span)? {
             let op = if can_assign {
                 OpCode::SetUpvalue
             } else {
@@ -372,7 +423,7 @@ impl Compiler {
             return Ok(());
         }
 
-        let constant = self.add_string_constant(name);
+        let constant = self.add_string_constant(name, span)?;
         if can_assign {
             if self.globals.contains_key(name) {
                 self.emit_bytes(OpCode::SetGlobal, &[constant], span);
@@ -393,12 +444,21 @@ impl Compiler {
         body: &[Stmt],
         span: Span,
     ) -> Result<RcCompiledFunction, GupError> {
+        if params.len() > u8::MAX as usize {
+            return Err(GupError::runtime(
+                span,
+                format!(
+                    "Too many parameters in function definition (limit is 255, got {}).",
+                    params.len()
+                ),
+            ));
+        }
         let enclosing = self.current;
         self.begin_function(params.len(), Some(enclosing), body);
 
         self.contexts[self.current].scope_depth = 1;
         for param in params {
-            self.declare_variable(param);
+            self.declare_variable(param, span)?;
             let ctx = &mut self.contexts[self.current];
             if let Some(local) = ctx.locals.last_mut() {
                 local.depth = 1;
@@ -431,25 +491,25 @@ impl Compiler {
                 self.compile_expression(value)?;
                 if let Some(local) = self.resolve_local(name) {
                     self.emit_bytes(OpCode::SetLocal, &[local], stmt.span);
-                } else if let Some(upvalue) = self.resolve_upvalue(name) {
+                } else if let Some(upvalue) = self.resolve_upvalue(name, stmt.span)? {
                     self.emit_bytes(OpCode::SetUpvalue, &[upvalue], stmt.span);
                 } else if self.globals.contains_key(name) {
-                    let constant = self.add_string_constant(name);
+                    let constant = self.add_string_constant(name, stmt.span)?;
                     self.emit_bytes(OpCode::SetGlobal, &[constant], stmt.span);
                 } else if self.contexts[self.current].enclosing.is_some()
                     && self.contexts[self.current].has_nested_functions
                 {
-                    self.declare_variable(name);
+                    self.declare_variable(name, stmt.span)?;
                     let slot = (self.contexts[self.current].locals.len() - 1) as u8;
                     self.emit_bytes(OpCode::SetLocal, &[slot], stmt.span);
                 } else if self.contexts[self.current].enclosing.is_none()
                     && self.contexts[self.current].scope_depth == 0
                 {
-                    let constant = self.add_string_constant(name);
+                    let constant = self.add_string_constant(name, stmt.span)?;
                     self.emit_bytes(OpCode::StoreVariable, &[constant], stmt.span);
                     self.globals.insert(name.clone(), true);
                 } else {
-                    let constant = self.add_string_constant(name);
+                    let constant = self.add_string_constant(name, stmt.span)?;
                     self.emit_bytes(OpCode::StoreVariable, &[constant], stmt.span);
                 }
             }
@@ -465,13 +525,13 @@ impl Compiler {
                 self.compile_block(then_branch, stmt.span)?;
 
                 let else_jump = self.emit_jump_placeholder(OpCode::Jump, stmt.span);
-                self.patch_jump(then_jump);
+                self.patch_jump(then_jump, stmt.span)?;
                 self.emit_byte(OpCode::Pop, stmt.span);
 
                 if let Some(else_body) = else_branch {
                     self.compile_block(else_body, stmt.span)?;
                 }
-                self.patch_jump(else_jump);
+                self.patch_jump(else_jump, stmt.span)?;
             }
 
             StmtKind::WhileLoop { condition, body } => {
@@ -480,8 +540,8 @@ impl Compiler {
                 let exit_jump = self.emit_jump_placeholder(OpCode::JumpIfFalse, stmt.span);
                 self.emit_byte(OpCode::Pop, stmt.span);
                 self.compile_block(body, stmt.span)?;
-                self.emit_loop(loop_start, stmt.span);
-                self.patch_jump(exit_jump);
+                self.emit_loop(loop_start, stmt.span)?;
+                self.patch_jump(exit_jump, stmt.span)?;
                 self.emit_byte(OpCode::Pop, stmt.span);
             }
 
@@ -497,18 +557,18 @@ impl Compiler {
                 if let Some(expr) = value {
                     self.compile_expression(expr)?;
                 } else {
-                    self.make_constant(Constant::Value(Value::Nothing), stmt.span);
+                    self.make_constant(Constant::Value(Value::Nothing), stmt.span)?;
                 }
                 self.emit_byte(OpCode::Return, stmt.span);
             }
 
             StmtKind::FunctionDef { name, params, body } => {
                 let function = self.compile_function(params, body, stmt.span)?;
-                let constant = self.add_constant(Constant::Function(function));
+                let constant = self.add_constant(Constant::Function(function), stmt.span)?;
                 self.emit_bytes(OpCode::Closure, &[constant], stmt.span);
-                let name_constant = self.add_string_constant(name);
+                let name_constant = self.add_string_constant(name, stmt.span)?;
                 self.emit_bytes(OpCode::StoreVariable, &[name_constant], stmt.span);
-                self.declare_variable(name);
+                self.declare_variable(name, stmt.span)?;
             }
         }
         Ok(())
@@ -535,11 +595,11 @@ impl Compiler {
             }
         }
 
-        let array_slot = self.add_temp_local("__for_array", span);
+        let array_slot = self.add_temp_local("__for_array", span)?;
         self.emit_bytes(OpCode::SetLocal, &[array_slot], span);
 
-        let index_slot = self.add_temp_local("__for_index", span);
-        self.make_constant(Constant::Value(Value::GuppyNumber(0)), span);
+        let index_slot = self.add_temp_local("__for_index", span)?;
+        self.make_constant(Constant::Value(Value::GuppyNumber(0)), span)?;
         self.emit_bytes(OpCode::SetLocal, &[index_slot], span);
 
         let loop_start = self.chunk().current_offset();
@@ -552,48 +612,48 @@ impl Compiler {
         let body_jump = self.emit_jump_placeholder(OpCode::JumpIfFalse, span);
         self.emit_byte(OpCode::Pop, span);
         let exit_jump = self.emit_jump_placeholder(OpCode::Jump, span);
-        self.patch_jump(body_jump);
+        self.patch_jump(body_jump, span)?;
         self.emit_byte(OpCode::Pop, span);
 
         self.emit_bytes(OpCode::GetLocal, &[array_slot], span);
         self.emit_bytes(OpCode::GetLocal, &[index_slot], span);
         self.emit_byte(OpCode::GetIndex, span);
-        let var_constant = self.add_string_constant(variable);
+        let var_constant = self.add_string_constant(variable, span)?;
         self.emit_bytes(OpCode::StoreVariable, &[var_constant], span);
-        self.declare_variable(variable);
+        self.declare_variable(variable, span)?;
 
         self.compile_block(body, span)?;
 
         self.emit_bytes(OpCode::GetLocal, &[index_slot], span);
-        self.make_constant(Constant::Value(Value::GuppyNumber(1)), span);
+        self.make_constant(Constant::Value(Value::GuppyNumber(1)), span)?;
         self.emit_byte(OpCode::Add, span);
         self.emit_bytes(OpCode::SetLocal, &[index_slot], span);
 
-        self.emit_loop(loop_start, span);
-        self.patch_jump(exit_jump);
+        self.emit_loop(loop_start, span)?;
+        self.patch_jump(exit_jump, span)?;
 
         self.end_scope(span);
         Ok(())
     }
 
-    fn add_temp_local(&mut self, name: &str, _span: Span) -> u8 {
-        self.declare_variable(name);
-        (self.contexts[self.current].locals.len() - 1) as u8
+    fn add_temp_local(&mut self, name: &str, span: Span) -> Result<u8, GupError> {
+        self.declare_variable(name, span)?;
+        Ok((self.contexts[self.current].locals.len() - 1) as u8)
     }
 
     fn compile_expression(&mut self, expr: &Expr) -> Result<(), GupError> {
         match &expr.kind {
             ExprKind::StringLiteral(text) => {
-                self.make_constant(Constant::Value(Value::GuppyString(text.clone())), expr.span);
+                self.make_constant(Constant::Value(Value::GuppyString(text.clone())), expr.span)?;
             }
             ExprKind::CharLiteral(ch) => {
-                self.make_constant(Constant::Value(Value::GuppyChar(*ch)), expr.span);
+                self.make_constant(Constant::Value(Value::GuppyChar(*ch)), expr.span)?;
             }
             ExprKind::NumberLiteral(n) => {
-                self.make_constant(Constant::Value(Value::GuppyNumber(*n)), expr.span);
+                self.make_constant(Constant::Value(Value::GuppyNumber(*n)), expr.span)?;
             }
             ExprKind::FloatLiteral(f) => {
-                self.make_constant(Constant::Value(Value::GuppyFloat(*f)), expr.span);
+                self.make_constant(Constant::Value(Value::GuppyFloat(*f)), expr.span)?;
             }
             ExprKind::BoolLiteral(b) => {
                 if *b {
@@ -603,6 +663,15 @@ impl Compiler {
                 }
             }
             ExprKind::ArrayLiteral(items) => {
+                if items.len() > u8::MAX as usize {
+                    return Err(GupError::runtime(
+                        expr.span,
+                        format!(
+                            "Too many array elements in literal (limit is 255, got {}).",
+                            items.len()
+                        ),
+                    ));
+                }
                 for item in items {
                     self.compile_expression(item)?;
                 }
@@ -622,6 +691,15 @@ impl Compiler {
                 self.compile_binary_op(left, *op, right, expr.span)?;
             }
             ExprKind::FunctionCall { name, args } => {
+                if args.len() > u8::MAX as usize {
+                    return Err(GupError::runtime(
+                        expr.span,
+                        format!(
+                            "Too many function arguments (limit is 255, got {}).",
+                            args.len()
+                        ),
+                    ));
+                }
                 if is_print_function(name) {
                     for arg in args {
                         self.compile_expression(arg)?;
@@ -637,9 +715,9 @@ impl Compiler {
             }
             ExprKind::Range { .. } => {
                 return Err(GupError::runtime(
-          expr.span,
-          "range() can only be used inside a for loop, like: for i in range(1 through 6).",
-        ));
+                    expr.span,
+                    "range() can only be used inside a for loop, like: for i in range(1 through 6).",
+                ));
             }
         }
         Ok(())
@@ -657,7 +735,7 @@ impl Compiler {
             let end_jump = self.emit_jump_placeholder(OpCode::JumpIfFalse, span);
             self.emit_byte(OpCode::Pop, span);
             self.compile_expression(right)?;
-            self.patch_jump(end_jump);
+            self.patch_jump(end_jump, span)?;
             return Ok(());
         }
 
@@ -665,10 +743,10 @@ impl Compiler {
             self.compile_expression(left)?;
             let else_jump = self.emit_jump_placeholder(OpCode::JumpIfFalse, span);
             let end_jump = self.emit_jump_placeholder(OpCode::Jump, span);
-            self.patch_jump(else_jump);
+            self.patch_jump(else_jump, span)?;
             self.emit_byte(OpCode::Pop, span);
             self.compile_expression(right)?;
-            self.patch_jump(end_jump);
+            self.patch_jump(end_jump, span)?;
             return Ok(());
         }
 
