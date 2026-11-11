@@ -10,6 +10,11 @@ license = "MIT"
 name = "guppty"
 path = "src/main.rs"
 
+[[bench]]
+name = "benchmark_suite"
+path = "benches/runner.rs"
+harness = false
+
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "0.8.23"

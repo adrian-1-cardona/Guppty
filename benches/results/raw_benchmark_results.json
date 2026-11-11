@@ -1,0 +1,106 @@
+{
+  "guppty_version": "0.2.0",
+  "commit": "47698195e92181d5f0db36538180df5e05c14ff5",
+  "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+  "os": "macos",
+  "arch": "aarch64",
+  "samples": 1,
+  "warmups": 0,
+  "benchmarks": {
+    "recursion": {
+      "vm": {
+        "median_ms": 216.8093,
+        "mean_ms": 216.8093,
+        "min_ms": 216.8093,
+        "max_ms": 216.8093,
+        "stddev_ms": 0.0000,
+        "samples_ms": [216.80929099999997]
+      },
+      "interp": {
+        "median_ms": 15.0117,
+        "mean_ms": 15.0117,
+        "min_ms": 15.0117,
+        "max_ms": 15.0117,
+        "stddev_ms": 0.0000,
+        "samples_ms": [15.011708]
+      },
+      "speedup_vm": 0.0692
+    },
+    "loops": {
+      "vm": {
+        "median_ms": 8.7259,
+        "mean_ms": 8.7259,
+        "min_ms": 8.7259,
+        "max_ms": 8.7259,
+        "stddev_ms": 0.0000,
+        "samples_ms": [8.725874999999998]
+      },
+      "interp": {
+        "median_ms": 7.7234,
+        "mean_ms": 7.7234,
+        "min_ms": 7.7234,
+        "max_ms": 7.7234,
+        "stddev_ms": 0.0000,
+        "samples_ms": [7.723375]
+      },
+      "speedup_vm": 0.8851
+    },
+    "closures": {
+      "vm": {
+        "median_ms": 5.9206,
+        "mean_ms": 5.9206,
+        "min_ms": 5.9206,
+        "max_ms": 5.9206,
+        "stddev_ms": 0.0000,
+        "samples_ms": [5.920584]
+      },
+      "interp": {
+        "median_ms": 7.2097,
+        "mean_ms": 7.2097,
+        "min_ms": 7.2097,
+        "max_ms": 7.2097,
+        "stddev_ms": 0.0000,
+        "samples_ms": [7.20975]
+      },
+      "speedup_vm": 1.2177
+    },
+    "strings": {
+      "vm": {
+        "median_ms": 3.6996,
+        "mean_ms": 3.6996,
+        "min_ms": 3.6996,
+        "max_ms": 3.6996,
+        "stddev_ms": 0.0000,
+        "samples_ms": [3.699583]
+      },
+      "interp": {
+        "median_ms": 3.8537,
+        "mean_ms": 3.8537,
+        "min_ms": 3.8537,
+        "max_ms": 3.8537,
+        "stddev_ms": 0.0000,
+        "samples_ms": [3.853708]
+      },
+      "speedup_vm": 1.0417
+    },
+    "synthetic": {
+      "vm": {
+        "median_ms": 4.6045,
+        "mean_ms": 4.6045,
+        "min_ms": 4.6045,
+        "max_ms": 4.6045,
+        "stddev_ms": 0.0000,
+        "samples_ms": [4.6045419999999995]
+      },
+      "interp": {
+        "median_ms": 6.1640,
+        "mean_ms": 6.1640,
+        "min_ms": 6.1640,
+        "max_ms": 6.1640,
+        "stddev_ms": 0.0000,
+        "samples_ms": [6.164041999999999]
+      },
+      "speedup_vm": 1.3387
+    }
+  }
+}
