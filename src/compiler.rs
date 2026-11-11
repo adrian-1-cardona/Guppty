@@ -608,6 +608,11 @@ impl Compiler {
                 }
                 self.emit_bytes(OpCode::MakeArray, &[items.len() as u8], expr.span);
             }
+            ExprKind::Index { collection, index } => {
+                self.compile_expression(collection)?;
+                self.compile_expression(index)?;
+                self.emit_byte(OpCode::GetIndex, expr.span);
+            }
             ExprKind::Variable(name) => {
                 self.named_variable(name, expr.span, false)?;
             }
@@ -627,6 +632,18 @@ impl Compiler {
                         self.compile_expression(arg)?;
                     }
                     self.emit_bytes(OpCode::Print, &[args.len() as u8], expr.span);
+                } else if name == "len" {
+                    if args.len() != 1 {
+                        return Err(GupError::runtime(
+                            expr.span,
+                            format!(
+                                "len() needs exactly one array, but got {} values.",
+                                args.len()
+                            ),
+                        ));
+                    }
+                    self.compile_expression(&args[0])?;
+                    self.emit_byte(OpCode::ArrayLen, expr.span);
                 } else {
                     self.named_variable(name, expr.span, false)?;
                     for arg in args {

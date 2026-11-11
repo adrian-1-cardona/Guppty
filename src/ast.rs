@@ -24,6 +24,10 @@ pub enum ExprKind {
     FloatLiteral(f64),
     BoolLiteral(bool),
     ArrayLiteral(Vec<Expr>),
+    Index {
+        collection: Box<Expr>,
+        index: Box<Expr>,
+    },
     Variable(String),
     UnaryOp {
         op: UnaryOp,
