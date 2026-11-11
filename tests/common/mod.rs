@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+#[allow(dead_code)]
 pub fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
@@ -31,6 +32,7 @@ impl Backend {
     }
 }
 
+#[allow(dead_code)]
 pub fn run_gup_file_with_backend(file: &Path, backend: Backend) -> (String, String, i32) {
     let bin = env!("CARGO_BIN_EXE_guppty");
 
