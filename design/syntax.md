@@ -1,5 +1,8 @@
 # Guppty Syntax
 
+> [!NOTE]
+> This syntax guide is a non-normative tutorial. For the authoritative and versioned language definition, see the [Guppty Language Specification](specification.md).
+
 Keywords are configurable in `src/syntax.rs`. Examples below use the defaults.
 
 ## Hello World

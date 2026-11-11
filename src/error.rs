@@ -252,10 +252,14 @@ fn classify(phase: ErrorPhase, message: &str) -> (ErrorKind, String) {
     }
 
     // --- Parsing: shape of the program ---
-    if contains("indented block") || contains("indent") {
+    if contains("indented block")
+        || contains("indent")
+        || contains("spaces only")
+        || contains("four spaces")
+    {
         return (
             ErrorKind::IndentationError,
-            "Indent the block under this line so its statements line up.".to_string(),
+            "Indent the block under this line with groups of four spaces (no tabs).".to_string(),
         );
     }
     if contains("expected an expression") {
