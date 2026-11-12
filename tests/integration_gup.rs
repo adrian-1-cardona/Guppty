@@ -241,7 +241,6 @@ fn divide_by_zero_reports_a_math_error_with_help() {
 }
 
 #[test]
-<<<<<<< HEAD
 fn compiler_constant_limit_reports_located_error_not_panic() {
     let mut source = String::new();
     for i in 0..260 {
@@ -270,7 +269,9 @@ fn compiler_call_argument_limit_reports_located_error_not_panic() {
         "{stderr}"
     );
     assert!(!stderr.contains("panicked at"), "{stderr}");
-=======
+}
+
+#[test]
 fn integer_overflow_is_a_normal_error_on_both_backends() {
     let mut path = std::env::temp_dir();
     path.push(format!("guppty-overflow-{}.gup", process::id()));
@@ -290,5 +291,4 @@ fn integer_overflow_is_a_normal_error_on_both_backends() {
     }
 
     let _ = fs::remove_file(path);
->>>>>>> origin/main
 }
