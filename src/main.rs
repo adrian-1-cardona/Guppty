@@ -1,6 +1,7 @@
 mod ast;
 mod bytecode;
 mod compiler;
+mod debugger;
 mod environment;
 mod error;
 mod interpreter;
@@ -86,6 +87,12 @@ fn dispatch(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         "build" => build_project(args),
+        "debug" => {
+            let (requested, commands) = parse_debug_args(&args[1..])?;
+            let path = resolve_source(requested.as_deref())?;
+            debug_file(&path, commands.as_deref())?;
+            Ok(())
+        }
         option if option.starts_with('-') => Err(format!("Unknown option: {option}")),
         filename => {
             let path = PathBuf::from(filename);
@@ -106,13 +113,15 @@ Usage:\n  \
   guppty new <name>       Create a fresh Guppty project\n  \
   guppty init             Create a project in this folder\n  \
   guppty run [file.gup]   Run a project or source file\n  \
+  guppty debug [file.gup] Debug a program with breakpoints and stepping\n  \
   guppty check [file.gup] Check a program without running it\n  \
   guppty build [file.gup] Build a standalone executable\n  \
   guppty <file.gup>       Run a source file directly\n  \
   guppty version          Show the installed version\n\n\
 Options:\n  \
   --interp                Use the tree-walking interpreter\n  \
-  -o, --output <path>     Choose the build output path"
+  -o, --output <path>     Choose the build output path\n  \
+  -c, --commands <cmds>   Pass debugger commands (semicolon-separated)"
     );
 }
 
@@ -342,6 +351,44 @@ fn parse_source_args(
     Ok((source, use_interpreter))
 }
 
+fn parse_debug_args(args: &[String]) -> Result<(Option<String>, Option<String>), String> {
+    let mut source = None;
+    let mut commands = None;
+    let mut options_ended = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        let argument = &args[index];
+        match argument.as_str() {
+            "--" if !options_ended => {
+                options_ended = true;
+                index += 1;
+            }
+            "-c" | "--commands" if !options_ended => {
+                if commands.is_some() {
+                    return Err("Repeated --commands option is not allowed.".to_string());
+                }
+                index += 1;
+                if index >= args.len() {
+                    return Err("Option --commands requires an argument.".to_string());
+                }
+                commands = Some(args[index].clone());
+                index += 1;
+            }
+            option if !options_ended && option.starts_with('-') => {
+                return Err(format!("Unknown option: {option}"));
+            }
+            value if source.is_none() => {
+                source = Some(value.to_string());
+                index += 1;
+            }
+            extra => return Err(format!("Unexpected argument: {extra}")),
+        }
+    }
+
+    Ok((source, commands))
+}
+
 fn display_executable_path(path: &Path) -> String {
     if path.components().count() == 2 && !path.is_absolute() {
         format!("./{}", path.display())
@@ -362,6 +409,49 @@ fn read_source(path: &Path) -> Result<String, String> {
 fn run_file(path: &Path, use_interpreter: bool) {
     let source = read_source(path).unwrap_or_else(|message| exit_with_message(message));
     run_source(&path.display().to_string(), &source, use_interpreter);
+}
+
+fn debug_file(path: &Path, commands: Option<&str>) -> Result<(), String> {
+    let source = read_source(path)?;
+    debug_source(&path.display().to_string(), &source, commands);
+    Ok(())
+}
+
+fn debug_source(filename: &str, source: &str, commands: Option<&str>) {
+    let tokens = lexer::lex(source).unwrap_or_else(|error| {
+        exit_with_message(error.render(filename, source));
+    });
+    let program = parser::parse(tokens).unwrap_or_else(|error| {
+        exit_with_message(error.render(filename, source));
+    });
+    let script = compiler::compile(&program).unwrap_or_else(|error| {
+        exit_with_message(error.render(filename, source));
+    });
+
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let is_interactive = commands.is_none();
+    let mut dbg = debugger::Debugger::new(
+        filename.to_string(),
+        source.to_string(),
+        stdin.lock(),
+        stdout.lock(),
+        is_interactive,
+    );
+
+    if let Some(cmds) = commands {
+        dbg.queue_commands(cmds);
+    }
+
+    if is_interactive {
+        println!("Guppty Debugger (guppty-debug) v{VERSION}");
+        println!("Debugging {filename}");
+        println!("Type 'help' for commands, 'continue' to run, 'step' to step.\n");
+    }
+
+    if let Err(error) = vm::run_with_debugger(script, &mut dbg) {
+        exit_with_message(error.render(filename, source));
+    }
 }
 
 fn compile_source(filename: &str, source: &str) {

@@ -59,11 +59,45 @@ the default backend; add `--interp` to use the legacy tree-walking interpreter.
 guppty new <name>                 Create a fresh project
 guppty init                       Create a project in this folder
 guppty run [file.gup]             Run a project or source file
+guppty debug [file.gup]           Debug interactively with breakpoints and stepping
 guppty check [file.gup]           Check without executing
 guppty build [file.gup] [-o PATH] Build a standalone executable
 guppty <file.gup>                 Run a source file directly
 guppty version                    Show the installed version
 ```
+
+## Interactive Debugger
+
+Guppty includes a built-in source-level and bytecode virtual machine debugger:
+
+```bash
+guppty debug examples/recursion_fib.gup
+```
+
+### Commands
+
+| Command | Aliases | Description |
+|---|---|---|
+| `break <line\|func>` | `b` | Set a breakpoint at a line number or function entry |
+| `delete [id]` | `d` | Delete a breakpoint by ID, or all breakpoints if omitted |
+| `breakpoints` | `info b` | List all breakpoints, statuses, and hit counts |
+| `step` | `s` | Step into the next source line or function |
+| `next` | `n` | Step over the next line in the current function |
+| `finish` | `f` | Step out of the current function |
+| `stepi` | `si` | Step a single bytecode instruction |
+| `continue` | `c` | Resume program execution |
+| `print <var>` | `p` | Print a variable from lexical scope |
+| `locals` | | List all local variables in the active call frame |
+| `globals` | | List all global variables |
+| `stack` | | Inspect the VM operand stack |
+| `backtrace` | `bt` | Print the full call stack with parameter values and lines |
+| `list [line] [rad]` | `l` | Show source listing with `->` position indicator |
+| `disasm` | `dis` | Disassemble bytecode for current function with IP indicator |
+| `quit` | `q` | Exit the debugger session |
+
+Scripted debugging is also supported via `-c` / `--commands` (e.g. `guppty debug file.gup -c "b 5; c; p x; c"`).
+
+For architectural trade-offs and benchmark numbers comparing standard execution against the debugger, see [`design/debugger_tradeoffs.md`](design/debugger_tradeoffs.md).
 
 ## Example
 

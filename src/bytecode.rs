@@ -87,6 +87,7 @@ pub enum Constant {
 /// A compiled function body — params + bytecode + how many upvalues it needs.
 #[derive(Debug, Clone)]
 pub struct CompiledFunction {
+    pub name: Option<String>,
     pub arity: usize,
     pub chunk: Chunk,
     pub upvalues: Vec<UpvalueDescriptor>,
@@ -157,6 +158,216 @@ impl Chunk {
     /// How many bytes of code we have so far (used for jump math).
     pub fn current_offset(&self) -> usize {
         self.code.len()
+    }
+
+    /// Disassemble one instruction at the given byte offset.
+    /// Returns the formatted instruction string and the byte offset of the next instruction.
+    pub fn disassemble_instruction(
+        &self,
+        offset: usize,
+        local_names: &[String],
+    ) -> (String, usize) {
+        if offset >= self.code.len() {
+            return ("<end of chunk>".to_string(), offset);
+        }
+        let byte = self.code[offset];
+        let Some(op) = decode_opcode(byte) else {
+            return (format!("UnknownOpcode({byte:#04x})"), offset + 1);
+        };
+
+        match op {
+            OpCode::Constant => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let c_str = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "Constant", idx, c_str),
+                    offset + 2,
+                )
+            }
+            OpCode::Nil => ("Nil".to_string(), offset + 1),
+            OpCode::True => ("True".to_string(), offset + 1),
+            OpCode::False => ("False".to_string(), offset + 1),
+            OpCode::Pop => ("Pop".to_string(), offset + 1),
+            OpCode::GetLocal => {
+                let slot = self.code.get(offset + 1).copied().unwrap_or(0);
+                let name = local_names
+                    .get(slot as usize)
+                    .map(|s| s.as_str())
+                    .unwrap_or("?");
+                (
+                    format!("{:<16} {:<4} (slot {}: {})", "GetLocal", slot, slot, name),
+                    offset + 2,
+                )
+            }
+            OpCode::SetLocal => {
+                let slot = self.code.get(offset + 1).copied().unwrap_or(0);
+                let name = local_names
+                    .get(slot as usize)
+                    .map(|s| s.as_str())
+                    .unwrap_or("?");
+                (
+                    format!("{:<16} {:<4} (slot {}: {})", "SetLocal", slot, slot, name),
+                    offset + 2,
+                )
+            }
+            OpCode::GetGlobal => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let name = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "GetGlobal", idx, name),
+                    offset + 2,
+                )
+            }
+            OpCode::SetGlobal => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let name = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "SetGlobal", idx, name),
+                    offset + 2,
+                )
+            }
+            OpCode::DefineGlobal => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let name = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "DefineGlobal", idx, name),
+                    offset + 2,
+                )
+            }
+            OpCode::GetUpvalue => {
+                let slot = self.code.get(offset + 1).copied().unwrap_or(0);
+                (format!("{:<16} {:<4}", "GetUpvalue", slot), offset + 2)
+            }
+            OpCode::SetUpvalue => {
+                let slot = self.code.get(offset + 1).copied().unwrap_or(0);
+                (format!("{:<16} {:<4}", "SetUpvalue", slot), offset + 2)
+            }
+            OpCode::CloseUpvalue => ("CloseUpvalue".to_string(), offset + 1),
+            OpCode::GetVariable => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let name = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "GetVariable", idx, name),
+                    offset + 2,
+                )
+            }
+            OpCode::StoreVariable => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let name = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "StoreVariable", idx, name),
+                    offset + 2,
+                )
+            }
+            OpCode::Add => ("Add".to_string(), offset + 1),
+            OpCode::Sub => ("Sub".to_string(), offset + 1),
+            OpCode::Mul => ("Mul".to_string(), offset + 1),
+            OpCode::Div => ("Div".to_string(), offset + 1),
+            OpCode::Negate => ("Negate".to_string(), offset + 1),
+            OpCode::Not => ("Not".to_string(), offset + 1),
+            OpCode::Equal => ("Equal".to_string(), offset + 1),
+            OpCode::NotEqual => ("NotEqual".to_string(), offset + 1),
+            OpCode::Less => ("Less".to_string(), offset + 1),
+            OpCode::Greater => ("Greater".to_string(), offset + 1),
+            OpCode::LessEqual => ("LessEqual".to_string(), offset + 1),
+            OpCode::GreaterEqual => ("GreaterEqual".to_string(), offset + 1),
+            OpCode::EnterScope => ("EnterScope".to_string(), offset + 1),
+            OpCode::ExitScope => ("ExitScope".to_string(), offset + 1),
+            OpCode::Jump => {
+                let hi = self.code.get(offset + 1).copied().unwrap_or(0) as u16;
+                let lo = self.code.get(offset + 2).copied().unwrap_or(0) as u16;
+                let jump = (hi << 8) | lo;
+                let target = offset + 3 + jump as usize;
+                (
+                    format!("{:<16} {:<4} -> {:04x}", "Jump", jump, target),
+                    offset + 3,
+                )
+            }
+            OpCode::JumpIfFalse => {
+                let hi = self.code.get(offset + 1).copied().unwrap_or(0) as u16;
+                let lo = self.code.get(offset + 2).copied().unwrap_or(0) as u16;
+                let jump = (hi << 8) | lo;
+                let target = offset + 3 + jump as usize;
+                (
+                    format!("{:<16} {:<4} -> {:04x}", "JumpIfFalse", jump, target),
+                    offset + 3,
+                )
+            }
+            OpCode::Loop => {
+                let hi = self.code.get(offset + 1).copied().unwrap_or(0) as u16;
+                let lo = self.code.get(offset + 2).copied().unwrap_or(0) as u16;
+                let jump = (hi << 8) | lo;
+                let target = (offset + 3).saturating_sub(jump as usize);
+                (
+                    format!("{:<16} {:<4} -> {:04x}", "Loop", jump, target),
+                    offset + 3,
+                )
+            }
+            OpCode::Call => {
+                let args = self.code.get(offset + 1).copied().unwrap_or(0);
+                (format!("{:<16} {:<4}", "Call", args), offset + 2)
+            }
+            OpCode::Return => ("Return".to_string(), offset + 1),
+            OpCode::Closure => {
+                let idx = self.code.get(offset + 1).copied().unwrap_or(0) as usize;
+                let desc = self.format_constant(idx);
+                (
+                    format!("{:<16} {:<4} ({})", "Closure", idx, desc),
+                    offset + 2,
+                )
+            }
+            OpCode::Print => {
+                let args = self.code.get(offset + 1).copied().unwrap_or(0);
+                (format!("{:<16} {:<4}", "Print", args), offset + 2)
+            }
+            OpCode::MakeArray => {
+                let count = self.code.get(offset + 1).copied().unwrap_or(0);
+                (format!("{:<16} {:<4}", "MakeArray", count), offset + 2)
+            }
+            OpCode::BuildRange => ("BuildRange".to_string(), offset + 1),
+            OpCode::GetIndex => ("GetIndex".to_string(), offset + 1),
+            OpCode::ArrayLen => ("ArrayLen".to_string(), offset + 1),
+        }
+    }
+
+    /// Format a constant by index into a readable string.
+    pub fn format_constant(&self, index: usize) -> String {
+        match self.constants.get(index) {
+            Some(Constant::Value(v)) => v.to_display_string(),
+            Some(Constant::String(s)) => format!("\"{s}\""),
+            Some(Constant::Function(f)) => {
+                let name = f
+                    .borrow()
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| "<anon>".to_string());
+                format!("<fn {name}>")
+            }
+            None => "<invalid constant>".to_string(),
+        }
+    }
+
+    /// Disassemble the entire chunk into a formatted string.
+    pub fn disassemble(
+        &self,
+        name: &str,
+        local_names: &[String],
+        current_ip: Option<usize>,
+    ) -> String {
+        let mut out = String::new();
+        out.push_str(&format!("== Bytecode for {} ==\n", name));
+        let mut offset = 0;
+        while offset < self.code.len() {
+            let pointer = if current_ip == Some(offset) {
+                "-> "
+            } else {
+                "   "
+            };
+            let (dis, next) = self.disassemble_instruction(offset, local_names);
+            out.push_str(&format!("{}{:04x}  {}\n", pointer, offset, dis));
+            offset = next;
+        }
+        out
     }
 }
 

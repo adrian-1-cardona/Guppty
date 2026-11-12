@@ -13,29 +13,30 @@ use std::rc::Rc;
 use crate::bytecode::{
     decode_opcode, ClosureUpvalue, ClosureValue, Constant, OpCode, RcCompiledFunction,
 };
+use crate::debugger::{DebugAction, DebugHook};
 use crate::error::{ErrorKind, GupError, Span};
 use crate::value::Value;
 
 /// One active function call — where we are in the recipe and our local plates.
 #[derive(Debug, Clone)]
-struct CallFrame {
-    function: RcCompiledFunction,
-    ip: usize,
-    stack_start: usize,
-    scope_depth: usize,
-    upvalues: Vec<Rc<RefCell<ClosureUpvalue>>>,
-    local_slots: HashMap<String, usize>,
+pub struct CallFrame {
+    pub function: RcCompiledFunction,
+    pub ip: usize,
+    pub stack_start: usize,
+    pub scope_depth: usize,
+    pub upvalues: Vec<Rc<RefCell<ClosureUpvalue>>>,
+    pub local_slots: HashMap<String, usize>,
 }
 
 /// The full virtual machine state.
 pub struct Vm {
-    stack: Vec<Value>,
-    frames: Vec<CallFrame>,
-    globals: HashMap<String, Value>,
-    open_upvalues: Vec<Rc<RefCell<ClosureUpvalue>>>,
+    pub stack: Vec<Value>,
+    pub frames: Vec<CallFrame>,
+    pub globals: HashMap<String, Value>,
+    pub open_upvalues: Vec<Rc<RefCell<ClosureUpvalue>>>,
 }
 
-/// Run a compiled script function from start to finish.
+/// Run a compiled script function from start to finish (fast path, zero overhead).
 pub fn run(function: RcCompiledFunction) -> Result<(), GupError> {
     let mut vm = Vm::new();
     vm.frames.push(CallFrame {
@@ -49,6 +50,23 @@ pub fn run(function: RcCompiledFunction) -> Result<(), GupError> {
     vm.run_loop()
 }
 
+/// Run a compiled script function with an attached debugger hook.
+pub fn run_with_debugger<D: DebugHook>(
+    function: RcCompiledFunction,
+    hook: &mut D,
+) -> Result<(), GupError> {
+    let mut vm = Vm::new();
+    vm.frames.push(CallFrame {
+        function,
+        ip: 0,
+        stack_start: 0,
+        scope_depth: 0,
+        upvalues: Vec::new(),
+        local_slots: HashMap::new(),
+    });
+    vm.run_loop_debug(hook)
+}
+
 impl Vm {
     fn new() -> Self {
         Vm {
@@ -59,8 +77,81 @@ impl Vm {
         }
     }
 
-    fn current_frame(&self) -> &CallFrame {
+    pub fn current_frame(&self) -> &CallFrame {
         self.frames.last().expect("VM always has a call frame")
+    }
+
+    pub fn frames(&self) -> &[CallFrame] {
+        &self.frames
+    }
+
+    pub fn stack(&self) -> &[Value] {
+        &self.stack
+    }
+
+    pub fn globals(&self) -> &HashMap<String, Value> {
+        &self.globals
+    }
+
+    pub fn get_frame_locals(&self, frame_idx: usize) -> Vec<(String, Value)> {
+        let mut locals = Vec::new();
+        if let Some(frame) = self.frames.get(frame_idx) {
+            let fn_borrow = frame.function.borrow();
+            for (slot, name) in fn_borrow.local_names.iter().enumerate() {
+                let idx = frame.stack_start + slot;
+                if idx < self.stack.len() {
+                    locals.push((name.clone(), self.stack[idx].clone()));
+                }
+            }
+            for (name, &idx) in &frame.local_slots {
+                if idx < self.stack.len() && !locals.iter().any(|(n, _)| n == name) {
+                    locals.push((name.clone(), self.stack[idx].clone()));
+                }
+            }
+        }
+        locals
+    }
+
+    pub fn format_backtrace(&self, source_filename: &str) -> Vec<String> {
+        let mut lines = Vec::new();
+        for (i, frame) in self.frames.iter().enumerate().rev() {
+            let fn_borrow = frame.function.borrow();
+            let fn_name = fn_borrow.name.as_deref().unwrap_or("<main>");
+            let ip = frame.ip.saturating_sub(1);
+            let span = fn_borrow
+                .chunk
+                .spans
+                .get(ip)
+                .copied()
+                .unwrap_or(Span::new(1, 1, 1));
+
+            let mut params = Vec::new();
+            for slot in 0..fn_borrow.arity {
+                let name = fn_borrow
+                    .local_names
+                    .get(slot)
+                    .map(|s| s.as_str())
+                    .unwrap_or("?");
+                let val_idx = frame.stack_start + slot;
+                let val_str = if val_idx < self.stack.len() {
+                    self.stack[val_idx].to_display_string()
+                } else {
+                    "?".to_string()
+                };
+                params.push(format!("{name}={val_str}"));
+            }
+            let param_str = if params.is_empty() {
+                String::new()
+            } else {
+                format!("({})", params.join(", "))
+            };
+
+            lines.push(format!(
+                "#{i} {fn_name}{param_str} at {}:{}:{}",
+                source_filename, span.line, span.column
+            ));
+        }
+        lines
     }
 
     fn current_frame_mut(&mut self) -> &mut CallFrame {
@@ -92,7 +183,7 @@ impl Vm {
         (high << 8) | low
     }
 
-    fn current_span(&self) -> Span {
+    pub fn current_span(&self) -> Span {
         let frame = self.current_frame();
         let ip = frame.ip.saturating_sub(1);
         frame
@@ -156,178 +247,233 @@ impl Vm {
             })?;
             self.current_frame_mut().ip = ip + 1;
 
-            match instruction {
-                OpCode::Constant => {
-                    let index = self.read_byte();
-                    self.push(self.constant_value(index)?);
-                }
-                OpCode::Nil => self.push(Value::Nothing),
-                OpCode::True => self.push(Value::GuppyBool(true)),
-                OpCode::False => self.push(Value::GuppyBool(false)),
-                OpCode::Pop => {
-                    self.pop();
-                }
-                OpCode::GetLocal => {
-                    let slot = self.read_byte();
-                    self.ensure_local_slot(slot);
-                    self.push(self.stack[self.slot_index(slot)].clone());
-                }
-                OpCode::SetLocal => {
-                    let slot = self.read_byte();
-                    let value = self.pop();
-                    self.ensure_local_slot(slot);
-                    let index = self.slot_index(slot);
-                    self.stack[index] = value;
-                }
-                OpCode::GetGlobal => {
-                    let index = self.read_byte();
-                    let name = self.constant_name(index)?;
-                    let value = self.globals.get(&name).cloned().ok_or_else(|| {
-                        self.runtime_error(format!("Variable '{}' is not defined yet!", name))
-                    })?;
-                    self.push(value);
-                }
-                OpCode::SetGlobal => {
-                    let index = self.read_byte();
-                    let name = self.constant_name(index)?;
-                    let value = self.pop();
-                    if !self.globals.contains_key(&name) {
-                        return Err(
-                            self.runtime_error(format!("Variable '{}' is not defined yet!", name))
-                        );
-                    }
-                    self.globals.insert(name, value);
-                }
-                OpCode::DefineGlobal => {
-                    let index = self.read_byte();
-                    let name = self.constant_name(index)?;
-                    let value = self.pop();
-                    self.globals.insert(name, value);
-                }
-                OpCode::GetUpvalue => {
-                    let slot = self.read_byte() as usize;
-                    self.push(self.read_upvalue(slot)?);
-                }
-                OpCode::SetUpvalue => {
-                    let slot = self.read_byte() as usize;
-                    let value = self.pop();
-                    self.write_upvalue(slot, value)?;
-                }
-                OpCode::CloseUpvalue => {
-                    self.close_upvalues(self.stack.len() - 1);
-                    self.pop();
-                }
-                OpCode::StoreVariable => {
-                    let index = self.read_byte();
-                    let name = self.constant_name(index)?;
-                    let value = self.pop();
-                    self.store_variable(&name, value)?;
-                }
-                OpCode::GetVariable => {
-                    let index = self.read_byte();
-                    let name = self.constant_name(index)?;
-                    self.push(self.get_variable(&name)?);
-                }
-                OpCode::Add => self.binary_op(OpCode::Add)?,
-                OpCode::Sub => self.binary_op(OpCode::Sub)?,
-                OpCode::Mul => self.binary_op(OpCode::Mul)?,
-                OpCode::Div => self.binary_op(OpCode::Div)?,
-                OpCode::Negate => {
-                    let value = self.pop();
-                    self.push(self.negate_value(value)?);
-                }
-                OpCode::Not => {
-                    let value = self.pop();
-                    self.push(Value::GuppyBool(!value.is_truthy()));
-                }
-                OpCode::Equal => self.compare_values(OpCode::Equal)?,
-                OpCode::NotEqual => self.compare_values(OpCode::NotEqual)?,
-                OpCode::Less => self.compare_values(OpCode::Less)?,
-                OpCode::Greater => self.compare_values(OpCode::Greater)?,
-                OpCode::LessEqual => self.compare_values(OpCode::LessEqual)?,
-                OpCode::GreaterEqual => self.compare_values(OpCode::GreaterEqual)?,
-                OpCode::EnterScope => {
-                    self.current_frame_mut().scope_depth += 1;
-                }
-                OpCode::ExitScope => {
-                    self.current_frame_mut().scope_depth -= 1;
-                }
-                OpCode::Jump => {
-                    let offset = self.read_u16();
-                    self.current_frame_mut().ip += offset as usize;
-                }
-                OpCode::JumpIfFalse => {
-                    let offset = self.read_u16();
-                    if !self.peek(0).is_truthy() {
-                        self.current_frame_mut().ip += offset as usize;
-                    }
-                }
-                OpCode::Loop => {
-                    let offset = self.read_u16();
-                    self.current_frame_mut().ip -= offset as usize;
-                }
-                OpCode::Call => {
-                    let arg_count = self.read_byte() as usize;
-                    self.call_value(arg_count)?;
-                }
-                OpCode::Return => {
-                    let value = self.pop();
-                    let stack_start = self.current_frame().stack_start;
-                    self.close_upvalues(stack_start);
-                    self.frames.pop();
-                    if self.frames.is_empty() {
-                        return Ok(());
-                    }
-                    while self.stack.len() > stack_start {
-                        self.pop();
-                    }
-                    self.push(value);
-                }
-                OpCode::Closure => {
-                    let constant = self.read_byte();
-                    self.make_closure(constant)?;
-                }
-                OpCode::Print => {
-                    let arg_count = self.read_byte() as usize;
-                    self.print_args(arg_count)?;
-                }
-                OpCode::MakeArray => {
-                    let count = self.read_byte() as usize;
-                    let mut items = Vec::with_capacity(count);
-                    for _ in 0..count {
-                        items.push(self.pop());
-                    }
-                    items.reverse();
-                    self.push(Value::GuppyArray(items));
-                }
-                OpCode::BuildRange => {
-                    let end_val = self.pop();
-                    let start_val = self.pop();
-                    self.push(self.build_range(start_val, end_val)?);
-                }
-                OpCode::GetIndex => {
-                    let index_val = self.pop();
-                    let array_val = self.pop();
-                    self.push(self.get_index(array_val, index_val)?);
-                }
-                OpCode::ArrayLen => {
-                    let array_val = self.pop();
-                    let len = match array_val {
-                        Value::GuppyArray(items) => items.len() as i64,
-                        other => {
-                            return Err(self.runtime_error(format!(
-                                "Expected an array but got {}",
-                                other.to_display_string()
-                            )));
-                        }
-                    };
-                    self.push(Value::GuppyNumber(len));
+            if !self.execute_instruction(instruction)? {
+                return Ok(());
+            }
+        }
+    }
+
+    fn run_loop_debug<D: DebugHook>(&mut self, hook: &mut D) -> Result<(), GupError> {
+        loop {
+            if self.frames.is_empty() {
+                return Ok(());
+            }
+
+            let ip = self.current_frame().ip;
+            let code_len = self.current_frame().function.borrow().chunk.code.len();
+            if ip >= code_len {
+                self.frames.pop();
+                continue;
+            }
+
+            let span = self
+                .current_frame()
+                .function
+                .borrow()
+                .chunk
+                .spans
+                .get(ip)
+                .copied()
+                .unwrap_or(Span::new(1, 1, 1));
+            let fn_name = self.current_frame().function.borrow().name.clone();
+
+            match hook.before_instruction(self, ip, span, fn_name.as_deref()) {
+                Ok(DebugAction::Abort) => return Ok(()),
+                Ok(DebugAction::Continue) => {}
+                Err(e) => return Err(e),
+            }
+
+            let opcode_byte = self.current_frame().function.borrow().chunk.code[ip];
+            let instruction = decode_opcode(opcode_byte).ok_or_else(|| {
+                GupError::runtime(Span::new(1, 1, 1), "Unknown opcode in bytecode.")
+            })?;
+            self.current_frame_mut().ip = ip + 1;
+
+            match self.execute_instruction(instruction) {
+                Ok(false) => return Ok(()),
+                Ok(true) => {}
+                Err(err) => {
+                    hook.on_error(self, &err);
+                    return Err(err);
                 }
             }
         }
     }
 
-    fn get_variable(&self, name: &str) -> Result<Value, GupError> {
+    #[inline(always)]
+    fn execute_instruction(&mut self, instruction: OpCode) -> Result<bool, GupError> {
+        match instruction {
+            OpCode::Constant => {
+                let index = self.read_byte();
+                self.push(self.constant_value(index)?);
+            }
+            OpCode::Nil => self.push(Value::Nothing),
+            OpCode::True => self.push(Value::GuppyBool(true)),
+            OpCode::False => self.push(Value::GuppyBool(false)),
+            OpCode::Pop => {
+                self.pop();
+            }
+            OpCode::GetLocal => {
+                let slot = self.read_byte();
+                self.ensure_local_slot(slot);
+                self.push(self.stack[self.slot_index(slot)].clone());
+            }
+            OpCode::SetLocal => {
+                let slot = self.read_byte();
+                let value = self.pop();
+                self.ensure_local_slot(slot);
+                let index = self.slot_index(slot);
+                self.stack[index] = value;
+            }
+            OpCode::GetGlobal => {
+                let index = self.read_byte();
+                let name = self.constant_name(index)?;
+                let value = self.globals.get(&name).cloned().ok_or_else(|| {
+                    self.runtime_error(format!("Variable '{}' is not defined yet!", name))
+                })?;
+                self.push(value);
+            }
+            OpCode::SetGlobal => {
+                let index = self.read_byte();
+                let name = self.constant_name(index)?;
+                let value = self.pop();
+                if !self.globals.contains_key(&name) {
+                    return Err(
+                        self.runtime_error(format!("Variable '{}' is not defined yet!", name))
+                    );
+                }
+                self.globals.insert(name, value);
+            }
+            OpCode::DefineGlobal => {
+                let index = self.read_byte();
+                let name = self.constant_name(index)?;
+                let value = self.pop();
+                self.globals.insert(name, value);
+            }
+            OpCode::GetUpvalue => {
+                let slot = self.read_byte() as usize;
+                self.push(self.read_upvalue(slot)?);
+            }
+            OpCode::SetUpvalue => {
+                let slot = self.read_byte() as usize;
+                let value = self.pop();
+                self.write_upvalue(slot, value)?;
+            }
+            OpCode::CloseUpvalue => {
+                self.close_upvalues(self.stack.len() - 1);
+                self.pop();
+            }
+            OpCode::StoreVariable => {
+                let index = self.read_byte();
+                let name = self.constant_name(index)?;
+                let value = self.pop();
+                self.store_variable(&name, value)?;
+            }
+            OpCode::GetVariable => {
+                let index = self.read_byte();
+                let name = self.constant_name(index)?;
+                self.push(self.get_variable(&name)?);
+            }
+            OpCode::Add => self.binary_op(OpCode::Add)?,
+            OpCode::Sub => self.binary_op(OpCode::Sub)?,
+            OpCode::Mul => self.binary_op(OpCode::Mul)?,
+            OpCode::Div => self.binary_op(OpCode::Div)?,
+            OpCode::Negate => {
+                let value = self.pop();
+                self.push(self.negate_value(value)?);
+            }
+            OpCode::Not => {
+                let value = self.pop();
+                self.push(Value::GuppyBool(!value.is_truthy()));
+            }
+            OpCode::Equal => self.compare_values(OpCode::Equal)?,
+            OpCode::NotEqual => self.compare_values(OpCode::NotEqual)?,
+            OpCode::Less => self.compare_values(OpCode::Less)?,
+            OpCode::Greater => self.compare_values(OpCode::Greater)?,
+            OpCode::LessEqual => self.compare_values(OpCode::LessEqual)?,
+            OpCode::GreaterEqual => self.compare_values(OpCode::GreaterEqual)?,
+            OpCode::EnterScope => {
+                self.current_frame_mut().scope_depth += 1;
+            }
+            OpCode::ExitScope => {
+                self.current_frame_mut().scope_depth -= 1;
+            }
+            OpCode::Jump => {
+                let offset = self.read_u16();
+                self.current_frame_mut().ip += offset as usize;
+            }
+            OpCode::JumpIfFalse => {
+                let offset = self.read_u16();
+                if !self.peek(0).is_truthy() {
+                    self.current_frame_mut().ip += offset as usize;
+                }
+            }
+            OpCode::Loop => {
+                let offset = self.read_u16();
+                self.current_frame_mut().ip -= offset as usize;
+            }
+            OpCode::Call => {
+                let arg_count = self.read_byte() as usize;
+                self.call_value(arg_count)?;
+            }
+            OpCode::Return => {
+                let value = self.pop();
+                let stack_start = self.current_frame().stack_start;
+                self.close_upvalues(stack_start);
+                self.frames.pop();
+                if self.frames.is_empty() {
+                    return Ok(false);
+                }
+                while self.stack.len() > stack_start {
+                    self.pop();
+                }
+                self.push(value);
+            }
+            OpCode::Closure => {
+                let constant = self.read_byte();
+                self.make_closure(constant)?;
+            }
+            OpCode::Print => {
+                let arg_count = self.read_byte() as usize;
+                self.print_args(arg_count)?;
+            }
+            OpCode::MakeArray => {
+                let count = self.read_byte() as usize;
+                let mut items = Vec::with_capacity(count);
+                for _ in 0..count {
+                    items.push(self.pop());
+                }
+                items.reverse();
+                self.push(Value::GuppyArray(items));
+            }
+            OpCode::BuildRange => {
+                let end_val = self.pop();
+                let start_val = self.pop();
+                self.push(self.build_range(start_val, end_val)?);
+            }
+            OpCode::GetIndex => {
+                let index_val = self.pop();
+                let array_val = self.pop();
+                self.push(self.get_index(array_val, index_val)?);
+            }
+            OpCode::ArrayLen => {
+                let array_val = self.pop();
+                let len = match array_val {
+                    Value::GuppyArray(items) => items.len() as i64,
+                    other => {
+                        return Err(self.runtime_error(format!(
+                            "Expected an array but got {}",
+                            other.to_display_string()
+                        )));
+                    }
+                };
+                self.push(Value::GuppyNumber(len));
+            }
+        }
+        Ok(true)
+    }
+
+    pub fn get_variable(&self, name: &str) -> Result<Value, GupError> {
         if let Some(index) = self.resolve_local_slot(name) {
             return Ok(self.stack[index].clone());
         }
@@ -748,6 +894,7 @@ mod tests {
         /// Wrap the assembled chunk in a runnable script function.
         fn finish(&mut self) -> RcCompiledFunction {
             Rc::new(RefCell::new(CompiledFunction {
+                name: Some("test".to_string()),
                 arity: 0,
                 chunk: std::mem::take(&mut self.chunk),
                 upvalues: Vec::new(),
