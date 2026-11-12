@@ -203,11 +203,7 @@ impl<R: BufRead, W: Write> Debugger<R, W> {
         let end = (target_line + radius).min(self.source_lines.len());
 
         for line_num in start..=end {
-            let marker = if line_num == target_line {
-                "->"
-            } else {
-                "  "
-            };
+            let marker = if line_num == target_line { "->" } else { "  " };
             let content = &self.source_lines[line_num - 1];
             let _ = writeln!(self.output, "{marker} {:4} | {}", line_num, content);
         }
@@ -407,11 +403,7 @@ impl<R: BufRead, W: Write> Debugger<R, W> {
                                 );
                             }
                             Err(_) => {
-                                let _ = writeln!(
-                                    self.output,
-                                    "Undefined variable: '{}'",
-                                    var_name
-                                );
+                                let _ = writeln!(self.output, "Undefined variable: '{}'", var_name);
                             }
                         }
                     }
@@ -425,12 +417,8 @@ impl<R: BufRead, W: Write> Debugger<R, W> {
                     } else {
                         let _ = writeln!(self.output, "Local variables:");
                         for (name, val) in locals {
-                            let _ = writeln!(
-                                self.output,
-                                "  {} = {}",
-                                name,
-                                Self::format_value(&val)
-                            );
+                            let _ =
+                                writeln!(self.output, "  {} = {}", name, Self::format_value(&val));
                         }
                     }
                 }
@@ -444,12 +432,8 @@ impl<R: BufRead, W: Write> Debugger<R, W> {
                         sorted.sort_by_key(|(k, _)| (*k).clone());
                         let _ = writeln!(self.output, "Global variables:");
                         for (name, val) in sorted {
-                            let _ = writeln!(
-                                self.output,
-                                "  {} = {}",
-                                name,
-                                Self::format_value(val)
-                            );
+                            let _ =
+                                writeln!(self.output, "  {} = {}", name, Self::format_value(val));
                         }
                     }
                 }
@@ -508,11 +492,10 @@ impl<R: BufRead, W: Write> Debugger<R, W> {
                     if let Some(frame) = vm.frames().last() {
                         let fn_borrow = frame.function.borrow();
                         let name = function_name.unwrap_or("<main>");
-                        let dis = fn_borrow.chunk.disassemble(
-                            name,
-                            &fn_borrow.local_names,
-                            Some(ip),
-                        );
+                        let dis =
+                            fn_borrow
+                                .chunk
+                                .disassemble(name, &fn_borrow.local_names, Some(ip));
                         let _ = write!(self.output, "{}", dis);
                     }
                 }

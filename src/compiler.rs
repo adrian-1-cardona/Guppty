@@ -65,7 +65,8 @@ pub fn compile(program: &Program) -> Result<RcCompiledFunction, GupError> {
     // Pass 1: register top-level functions (same order as the tree-walking interpreter).
     for stmt in program {
         if let StmtKind::FunctionDef { name, params, body } = &stmt.kind {
-            let function = compiler.compile_function(Some(name.clone()), params, body, stmt.span)?;
+            let function =
+                compiler.compile_function(Some(name.clone()), params, body, stmt.span)?;
             let constant = compiler.add_constant(Constant::Function(function));
             compiler.emit_bytes(OpCode::Closure, &[constant], stmt.span);
             compiler.define_global(name, stmt.span);
@@ -506,7 +507,8 @@ impl Compiler {
             }
 
             StmtKind::FunctionDef { name, params, body } => {
-                let function = self.compile_function(Some(name.clone()), params, body, stmt.span)?;
+                let function =
+                    self.compile_function(Some(name.clone()), params, body, stmt.span)?;
                 let constant = self.add_constant(Constant::Function(function));
                 self.emit_bytes(OpCode::Closure, &[constant], stmt.span);
                 let name_constant = self.add_string_constant(name);

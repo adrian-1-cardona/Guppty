@@ -127,7 +127,11 @@ impl Vm {
 
             let mut params = Vec::new();
             for slot in 0..fn_borrow.arity {
-                let name = fn_borrow.local_names.get(slot).map(|s| s.as_str()).unwrap_or("?");
+                let name = fn_borrow
+                    .local_names
+                    .get(slot)
+                    .map(|s| s.as_str())
+                    .unwrap_or("?");
                 let val_idx = frame.stack_start + slot;
                 let val_str = if val_idx < self.stack.len() {
                     self.stack[val_idx].to_display_string()

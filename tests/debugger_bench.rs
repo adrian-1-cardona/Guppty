@@ -61,17 +61,34 @@ fn run_debugger_benchmarks() {
     .unwrap();
 
     let workloads: &[(&'static str, String)] = &[
-        ("Deep Recursion (fib 18)", fib_deep_path.to_str().unwrap().to_string()),
-        ("Tight Loop (5k iters)", loop_heavy_path.to_str().unwrap().to_string()),
-        ("Recursion (fib 6)", "examples/recursion_fib.gup".to_string()),
+        (
+            "Deep Recursion (fib 18)",
+            fib_deep_path.to_str().unwrap().to_string(),
+        ),
+        (
+            "Tight Loop (5k iters)",
+            loop_heavy_path.to_str().unwrap().to_string(),
+        ),
+        (
+            "Recursion (fib 6)",
+            "examples/recursion_fib.gup".to_string(),
+        ),
         ("Loop (while_sum)", "examples/while_sum.gup".to_string()),
-        ("Closures (counter)", "examples/closure_counter.gup".to_string()),
+        (
+            "Closures (counter)",
+            "examples/closure_counter.gup".to_string(),
+        ),
         ("Strings (concat)", "examples/string_concat.gup".to_string()),
     ];
 
     println!("\n=========================================================================================");
-    println!("GUPPTY EXECUTION & DEBUGGER BENCHMARK REPORT (N = {} runs per test)", runs);
-    println!("=========================================================================================");
+    println!(
+        "GUPPTY EXECUTION & DEBUGGER BENCHMARK REPORT (N = {} runs per test)",
+        runs
+    );
+    println!(
+        "========================================================================================="
+    );
 
     let mut results = Vec::new();
 
@@ -90,17 +107,16 @@ fn run_debugger_benchmarks() {
         });
     }
 
-    println!("{:<26} | {:>12} | {:>14} | {:>14} | {:>12}",
-        "Workload", "Standard VM", "Debug (Pass)", "Debug (Active)", "Interpreter");
+    println!(
+        "{:<26} | {:>12} | {:>14} | {:>14} | {:>12}",
+        "Workload", "Standard VM", "Debug (Pass)", "Debug (Active)", "Interpreter"
+    );
     println!("---------------------------+--------------+----------------+----------------+-------------");
 
     for r in &results {
-        println!("{:<26} | {:>9.2} µs | {:>11.2} µs | {:>11.2} µs | {:>9.2} µs",
-            r.name,
-            r.vm_mean_us,
-            r.debug_passive_mean_us,
-            r.debug_active_mean_us,
-            r.interp_mean_us
+        println!(
+            "{:<26} | {:>9.2} µs | {:>11.2} µs | {:>11.2} µs | {:>9.2} µs",
+            r.name, r.vm_mean_us, r.debug_passive_mean_us, r.debug_active_mean_us, r.interp_mean_us
         );
     }
 
