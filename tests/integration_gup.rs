@@ -241,6 +241,7 @@ fn divide_by_zero_reports_a_math_error_with_help() {
 }
 
 #[test]
+<<<<<<< HEAD
 fn compiler_constant_limit_reports_located_error_not_panic() {
     let mut source = String::new();
     for i in 0..260 {
@@ -269,4 +270,25 @@ fn compiler_call_argument_limit_reports_located_error_not_panic() {
         "{stderr}"
     );
     assert!(!stderr.contains("panicked at"), "{stderr}");
+=======
+fn integer_overflow_is_a_normal_error_on_both_backends() {
+    let mut path = std::env::temp_dir();
+    path.push(format!("guppty-overflow-{}.gup", process::id()));
+    fs::write(&path, "out(9223372036854775807 + 1)\n").expect("write overflow source");
+
+    for extra in [None, Some("--interp")] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_guppty"));
+        command.arg(&path);
+        if let Some(flag) = extra {
+            command.arg(flag);
+        }
+        let output = command.output().expect("run overflow source");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(!output.status.success());
+        assert!(stderr.contains("overflow"), "{stderr}");
+        assert!(!stderr.contains("panicked"), "{stderr}");
+    }
+
+    let _ = fs::remove_file(path);
+>>>>>>> origin/main
 }
