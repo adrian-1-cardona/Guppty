@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::bytecode::{
-    decode_opcode, ClosureUpvalue, ClosureValue, Constant, OpCode, RcCompiledFunction,
+    decode_opcode, validate_function, ClosureUpvalue, ClosureValue, Constant, OpCode,
+    RcCompiledFunction,
 };
 use crate::error::{ErrorKind, GupError, Span};
 use crate::value::Value;
@@ -37,6 +38,7 @@ pub struct Vm {
 
 /// Run a compiled script function from start to finish.
 pub fn run(function: RcCompiledFunction) -> Result<(), GupError> {
+    validate_function(&function.borrow())?;
     let mut vm = Vm::new();
     vm.frames.push(CallFrame {
         function,
@@ -71,12 +73,17 @@ impl Vm {
         self.stack.push(value);
     }
 
-    fn pop(&mut self) -> Value {
-        self.stack.pop().expect("Stack underflow in VM")
+    fn pop(&mut self) -> Result<Value, GupError> {
+        self.stack
+            .pop()
+            .ok_or_else(|| self.runtime_error("Stack underflow in VM."))
     }
 
-    fn peek(&self, distance: usize) -> &Value {
-        &self.stack[self.stack.len() - 1 - distance]
+    fn peek(&self, distance: usize) -> Result<&Value, GupError> {
+        if distance >= self.stack.len() {
+            return Err(self.runtime_error("Stack underflow in VM."));
+        }
+        Ok(&self.stack[self.stack.len() - 1 - distance])
     }
 
     fn read_byte(&mut self) -> u8 {
@@ -110,16 +117,20 @@ impl Vm {
     }
 
     fn constant_name(&self, index: u8) -> Result<String, GupError> {
-        match &self.current_frame().function.borrow().chunk.constants[index as usize] {
-            Constant::String(name) => Ok(name.clone()),
-            _ => Err(self.runtime_error("Expected a variable name in constants.")),
+        let constants = &self.current_frame().function.borrow().chunk.constants;
+        match constants.get(index as usize) {
+            Some(Constant::String(name)) => Ok(name.clone()),
+            Some(_) => Err(self.runtime_error("Expected a variable name in constants.")),
+            None => Err(self.runtime_error(format!("Constant index {index} out of bounds."))),
         }
     }
 
     fn constant_value(&self, index: u8) -> Result<Value, GupError> {
-        match &self.current_frame().function.borrow().chunk.constants[index as usize] {
-            Constant::Value(value) => Ok(value.clone()),
-            _ => Err(self.runtime_error("Expected a value constant.")),
+        let constants = &self.current_frame().function.borrow().chunk.constants;
+        match constants.get(index as usize) {
+            Some(Constant::Value(value)) => Ok(value.clone()),
+            Some(_) => Err(self.runtime_error("Expected a value constant.")),
+            None => Err(self.runtime_error(format!("Constant index {index} out of bounds."))),
         }
     }
 
@@ -165,7 +176,7 @@ impl Vm {
                 OpCode::True => self.push(Value::GuppyBool(true)),
                 OpCode::False => self.push(Value::GuppyBool(false)),
                 OpCode::Pop => {
-                    self.pop();
+                    self.pop()?;
                 }
                 OpCode::GetLocal => {
                     let slot = self.read_byte();
@@ -174,7 +185,7 @@ impl Vm {
                 }
                 OpCode::SetLocal => {
                     let slot = self.read_byte();
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.ensure_local_slot(slot);
                     let index = self.slot_index(slot);
                     self.stack[index] = value;
@@ -190,7 +201,7 @@ impl Vm {
                 OpCode::SetGlobal => {
                     let index = self.read_byte();
                     let name = self.constant_name(index)?;
-                    let value = self.pop();
+                    let value = self.pop()?;
                     if !self.globals.contains_key(&name) {
                         return Err(
                             self.runtime_error(format!("Variable '{}' is not defined yet!", name))
@@ -201,7 +212,7 @@ impl Vm {
                 OpCode::DefineGlobal => {
                     let index = self.read_byte();
                     let name = self.constant_name(index)?;
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.globals.insert(name, value);
                 }
                 OpCode::GetUpvalue => {
@@ -210,17 +221,17 @@ impl Vm {
                 }
                 OpCode::SetUpvalue => {
                     let slot = self.read_byte() as usize;
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.write_upvalue(slot, value)?;
                 }
                 OpCode::CloseUpvalue => {
-                    self.close_upvalues(self.stack.len() - 1);
-                    self.pop();
+                    self.close_upvalues(self.stack.len().saturating_sub(1));
+                    self.pop()?;
                 }
                 OpCode::StoreVariable => {
                     let index = self.read_byte();
                     let name = self.constant_name(index)?;
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.store_variable(&name, value)?;
                 }
                 OpCode::GetVariable => {
@@ -233,11 +244,11 @@ impl Vm {
                 OpCode::Mul => self.binary_op(OpCode::Mul)?,
                 OpCode::Div => self.binary_op(OpCode::Div)?,
                 OpCode::Negate => {
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.push(self.negate_value(value)?);
                 }
                 OpCode::Not => {
-                    let value = self.pop();
+                    let value = self.pop()?;
                     self.push(Value::GuppyBool(!value.is_truthy()));
                 }
                 OpCode::Equal => self.compare_values(OpCode::Equal)?,
@@ -250,7 +261,8 @@ impl Vm {
                     self.current_frame_mut().scope_depth += 1;
                 }
                 OpCode::ExitScope => {
-                    self.current_frame_mut().scope_depth -= 1;
+                    self.current_frame_mut().scope_depth =
+                        self.current_frame().scope_depth.saturating_sub(1);
                 }
                 OpCode::Jump => {
                     let offset = self.read_u16();
@@ -258,7 +270,7 @@ impl Vm {
                 }
                 OpCode::JumpIfFalse => {
                     let offset = self.read_u16();
-                    if !self.peek(0).is_truthy() {
+                    if !self.peek(0)?.is_truthy() {
                         self.current_frame_mut().ip += offset as usize;
                     }
                 }
@@ -271,7 +283,7 @@ impl Vm {
                     self.call_value(arg_count)?;
                 }
                 OpCode::Return => {
-                    let value = self.pop();
+                    let value = self.pop()?;
                     let stack_start = self.current_frame().stack_start;
                     self.close_upvalues(stack_start);
                     self.frames.pop();
@@ -279,7 +291,7 @@ impl Vm {
                         return Ok(());
                     }
                     while self.stack.len() > stack_start {
-                        self.pop();
+                        self.pop()?;
                     }
                     self.push(value);
                 }
@@ -295,23 +307,23 @@ impl Vm {
                     let count = self.read_byte() as usize;
                     let mut items = Vec::with_capacity(count);
                     for _ in 0..count {
-                        items.push(self.pop());
+                        items.push(self.pop()?);
                     }
                     items.reverse();
                     self.push(Value::GuppyArray(items));
                 }
                 OpCode::BuildRange => {
-                    let end_val = self.pop();
-                    let start_val = self.pop();
+                    let end_val = self.pop()?;
+                    let start_val = self.pop()?;
                     self.push(self.build_range(start_val, end_val)?);
                 }
                 OpCode::GetIndex => {
-                    let index_val = self.pop();
-                    let array_val = self.pop();
+                    let index_val = self.pop()?;
+                    let array_val = self.pop()?;
                     self.push(self.get_index(array_val, index_val)?);
                 }
                 OpCode::ArrayLen => {
-                    let array_val = self.pop();
+                    let array_val = self.pop()?;
                     let len = match array_val {
                         Value::GuppyArray(items) => items.len() as i64,
                         other => {
@@ -405,27 +417,44 @@ impl Vm {
     }
 
     fn read_upvalue(&self, slot: usize) -> Result<Value, GupError> {
-        let upvalue = self.current_frame().upvalues[slot].borrow();
+        let upvalues = &self.current_frame().upvalues;
+        let upvalue_rc = upvalues
+            .get(slot)
+            .ok_or_else(|| self.runtime_error(format!("Upvalue slot {slot} out of bounds.")))?;
+        let upvalue = upvalue_rc.borrow();
         if let Some(open_slot) = upvalue.open_slot {
-            Ok(self.stack[open_slot].clone())
+            if open_slot < self.stack.len() {
+                Ok(self.stack[open_slot].clone())
+            } else {
+                Err(self.runtime_error("Upvalue open slot out of stack bounds."))
+            }
         } else {
             Ok(upvalue.closed.clone().unwrap_or(Value::Nothing))
         }
     }
 
     fn write_upvalue(&mut self, slot: usize, value: Value) -> Result<(), GupError> {
-        let open_slot = self.current_frame().upvalues[slot].borrow().open_slot;
+        let upvalues = &self.current_frame().upvalues;
+        let upvalue_rc = upvalues
+            .get(slot)
+            .ok_or_else(|| self.runtime_error(format!("Upvalue slot {slot} out of bounds.")))?
+            .clone();
+        let open_slot = upvalue_rc.borrow().open_slot;
         if let Some(index) = open_slot {
-            self.stack[index] = value;
+            if index < self.stack.len() {
+                self.stack[index] = value;
+            } else {
+                return Err(self.runtime_error("Upvalue open slot out of stack bounds."));
+            }
         } else {
-            self.current_frame().upvalues[slot].borrow_mut().closed = Some(value);
+            upvalue_rc.borrow_mut().closed = Some(value);
         }
         Ok(())
     }
 
     fn binary_op(&mut self, op: OpCode) -> Result<(), GupError> {
-        let right = self.pop();
-        let left = self.pop();
+        let right = self.pop()?;
+        let left = self.pop()?;
 
         if op == OpCode::Add
             && (matches!(left, Value::GuppyString(_)) || matches!(right, Value::GuppyString(_)))
@@ -491,8 +520,8 @@ impl Vm {
     }
 
     fn compare_values(&mut self, op: OpCode) -> Result<(), GupError> {
-        let right = self.pop();
-        let left = self.pop();
+        let right = self.pop()?;
+        let left = self.pop()?;
 
         let result = if let (Value::GuppyNumber(left_num), Value::GuppyNumber(right_num)) =
             (&left, &right)
@@ -571,7 +600,7 @@ impl Vm {
         } else {
             let mut parts = Vec::with_capacity(arg_count);
             for _ in 0..arg_count {
-                parts.push(self.pop().to_display_string());
+                parts.push(self.pop()?.to_display_string());
             }
             parts.reverse();
             println!("{}", parts.join(" "));
@@ -581,7 +610,7 @@ impl Vm {
     }
 
     fn call_value(&mut self, arg_count: usize) -> Result<(), GupError> {
-        let callee = self.peek(arg_count).clone();
+        let callee = self.peek(arg_count)?.clone();
         match callee {
             Value::GuppyClosure(closure) => self.call_closure(closure, arg_count),
             other => Err(self
@@ -625,11 +654,13 @@ impl Vm {
     }
 
     fn make_closure(&mut self, constant: u8) -> Result<(), GupError> {
-        let function =
-            match &self.current_frame().function.borrow().chunk.constants[constant as usize] {
-                Constant::Function(function) => function.clone(),
+        let function = {
+            let constants = &self.current_frame().function.borrow().chunk.constants;
+            match constants.get(constant as usize) {
+                Some(Constant::Function(function)) => function.clone(),
                 _ => return Err(self.runtime_error("Expected a function constant.")),
-            };
+            }
+        };
 
         let upvalue_desc = function.borrow().upvalues.clone();
         let mut upvalues = Vec::with_capacity(upvalue_desc.len());
